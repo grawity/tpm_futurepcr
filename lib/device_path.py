@@ -1,6 +1,6 @@
 # https://github.com/tianocore/edk2/blob/master/MdePkg/Include/Protocol/DevicePath.h
 import io
-from .binary_reader import *
+from .binary_reader import BinaryReader
 from .tpm_constants import *
 from .util import find_mountpoint_by_partuuid
 
