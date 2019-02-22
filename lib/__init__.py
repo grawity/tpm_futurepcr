@@ -7,7 +7,7 @@ from pprint import pprint
 
 from .event_log import *
 from .tpm_constants import *
-from .util import (hash_pecoff, read_current_pcr)
+from .util import (hash_pecoff, init_empty_pcrs, read_current_pcr, NUM_PCRS, PCR_SIZE)
 
 quiet = False
 
@@ -17,10 +17,7 @@ quiet = False
 def main():
     SHA512_DIGEST_SIZE = 512 // 8
 
-    NUM_PCRS = 24
-    PCR_SIZE = hashlib.sha1().digest_size
-    this_pcrs = {x: (b"\0" * PCR_SIZE) for x in range(NUM_PCRS)}
-    this_pcrs.update({x: (b"\xFF" * PCR_SIZE) for x in [17,18,19,20,21,22]})
+    this_pcrs = init_empty_pcrs()
     next_pcrs = {**this_pcrs}
 
     for event in enum_log_entries():
@@ -52,10 +49,12 @@ def main():
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
 
-    # hack: systemd-boot doesn't generate a log entry when extending PCR 8
+    # HACK: systemd-boot doesn't generate a log entry when extending PCR 8
+    # Assume that the kernel command line will remain exactly the same as for this boot.
     if this_pcrs[8] == (b"\x00" * PCR_SIZE):
         this_pcrs[8] = read_current_pcr(8)
         next_pcrs[8] = this_pcrs[8]
+
 
     wanted_pcrs = range(NUM_PCRS)
     if quiet:

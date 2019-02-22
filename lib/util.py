@@ -2,6 +2,9 @@ import hashlib
 import signify.fingerprinter
 import subprocess
 
+NUM_PCRS = 32
+PCR_SIZE = hashlib.sha1().digest_size
+
 def to_hex(buf):
     import binascii
     return binascii.hexlify(buf).decode()
@@ -30,6 +33,11 @@ def hash_pecoff(path, digest="sha1"):
         fpr.add_authenticode_hashers(getattr(hashlib, digest))
         return fpr.hash()[digest]
     return None
+
+def init_empty_pcrs():
+    pcrs = {x: (b"\xFF" if x in {17, 18, 19, 20, 21, 22} else b"\x00") * PCR_SIZE
+            for x in range(NUM_PCRS)}
+    return pcrs
 
 def read_current_pcr(idx):
     res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%d" % idx, "-Q", "-o", "/dev/stdout"],
