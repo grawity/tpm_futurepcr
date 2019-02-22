@@ -2,7 +2,7 @@ import hashlib
 import signify.fingerprinter
 import subprocess
 
-NUM_PCRS = 32
+NUM_PCRS = 24
 PCR_SIZE = hashlib.sha1().digest_size
 
 def to_hex(buf):
