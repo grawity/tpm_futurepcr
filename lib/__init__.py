@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import sys
 import os
 import hashlib
@@ -14,11 +15,25 @@ quiet = False
 # TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-L", "--pcr-list",
+                        help="limit output to specified PCR indexes")
+    parser.add_argument("-o", "--output",
+                        help="write binary PCR values to specified file")
+    parser.add_argument("--verbose", action="store_true",
+                        help="show verbose information about log parsing")
+    args = parser.parse_args()
+
+    if args.pcr_list:
+        wanted_pcrs = [int(x) for x in args.pcr_list.split(",")]
+    else:
+        wanted_pcrs = [*range(NUM_PCRS)]
+
     this_pcrs = init_empty_pcrs()
     next_pcrs = {**this_pcrs}
 
     for event in enum_log_entries():
-        if not quiet:
+        if args.verbose:
             show_log_entry(event)
 
         idx = event["pcr_idx"]
@@ -30,7 +45,7 @@ def main():
             unix_path = device_path_to_unix_path(event_data["device_path_vec"])
             file_hash = hash_pecoff(unix_path, "sha1")
             next_extend_value = file_hash
-            if not quiet:
+            if args.verbose:
                 print("-- extending with coff hash --")
                 print("file path =", unix_path)
                 print("file hash =", to_hex(file_hash))
@@ -39,7 +54,7 @@ def main():
 
         this_pcrs[idx] = hashlib.sha1(this_pcrs[idx] + this_extend_value).digest()
         next_pcrs[idx] = hashlib.sha1(next_pcrs[idx] + next_extend_value).digest()
-        if not quiet:
+        if args.verbose:
             print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
@@ -50,13 +65,12 @@ def main():
         this_pcrs[8] = read_current_pcr(8)
         next_pcrs[8] = this_pcrs[8]
 
+    if args.verbose or (not args.output):
+        print("== Final PCR values ==")
+        for x in wanted_pcrs:
+            print("PCR %2d:" % x, to_hex(this_pcrs[x]), "|", to_hex(next_pcrs[x]))
 
-    wanted_pcrs = range(NUM_PCRS)
-    if quiet:
-        with open("/dev/stdout", "wb") as fh:
+    if args.output:
+        with open(args.output, "wb") as fh:
             for x in wanted_pcrs:
                 fh.write(next_pcrs[x])
-    else:
-        print("== Final PCR values ==")
-        for x in range(NUM_PCRS):
-            print("PCR %2d:" % x, to_hex(this_pcrs[x]), "|", to_hex(next_pcrs[x]))
