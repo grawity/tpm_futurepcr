@@ -2,6 +2,9 @@ from .binary_reader import BinaryReader
 from .device_path import *
 from .util import (to_hex, hexdump)
 
+SHA1_DIGEST_SIZE = 20
+SHA512_DIGEST_SIZE = 64
+
 def parse_efi_bsa_event(buf):
     buf = BinaryReader(io.BytesIO(buf))
     log = {}
@@ -42,7 +45,7 @@ def enum_log_entries():
                 event["event_type"] = rd.read_u32_le()
                 event["event_type"] = TpmEventType(event["event_type"])
                 if tpm_ver == 1:
-                    event["pcr_extend_value"] = rd.read(20)
+                    event["pcr_extend_value"] = rd.read(SHA1_DIGEST_SIZE)
                 elif tpm_ver == 2:
                     event["pcr_count"] = rd.read_u32_le()
                     num_banks = 3

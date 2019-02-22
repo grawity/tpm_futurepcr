@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import sys
 import os
-import io
 import hashlib
 from pprint import pprint
 
@@ -15,8 +14,6 @@ quiet = False
 # TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
 
 def main():
-    SHA512_DIGEST_SIZE = 512 // 8
-
     this_pcrs = init_empty_pcrs()
     next_pcrs = {**this_pcrs}
 
