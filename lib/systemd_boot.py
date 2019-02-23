@@ -1,5 +1,8 @@
 import os
-from .util import find_mountpoint_by_partuuid
+from .util import (
+    extend_pcr_with_data,
+    find_mountpoint_by_partuuid,
+)
 
 def _efivar_read(name, uuid):
     path = "/sys/firmware/efi/efivars/%s-%s" % (name, uuid)
@@ -54,7 +57,11 @@ def loader_get_cmdline(entry, esp=None):
             options.append(val)
     return " ".join([*initrd, *options])
 
-def loader_get_next_cmdline(esp=None):
+def loader_get_next_cmdline():
     entry = loader_get_current_entry()
     esp = find_mountpoint_by_partuuid(loader_get_esp_partuuid())
     return loader_get_cmdline(entry, esp)
+
+def loader_extend_pcr8(pcr_value, cmdline):
+    cmdline = (cmdline + "\0").encode("utf-16le")
+    return extend_pcr_with_data(pcr_value, cmdline)
