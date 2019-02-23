@@ -23,6 +23,8 @@ def main():
                         help="limit output to specified PCR indexes")
     parser.add_argument("-o", "--output",
                         help="write binary PCR values to specified file")
+    parser.add_argument("--compare", action="store_true",
+                        help="compare computed PCRs against live values")
     parser.add_argument("--verbose", action="store_true",
                         help="show verbose information about log parsing")
     args = parser.parse_args()
@@ -36,6 +38,8 @@ def main():
 
     this_pcrs = init_empty_pcrs()
     next_pcrs = {**this_pcrs}
+
+    # TODO: Figure out why PCR[5] does not match the computed one.
 
     for event in enum_log_entries():
         idx = event["pcr_idx"]
@@ -67,6 +71,7 @@ def main():
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
 
+
     # HACK: systemd-boot doesn't generate a log entry when extending PCR[8], do it ourselves
     # (not sure why, as it calls HashLogExtendEvent and there should be an EV_IPL(13) event)
     if 8 in wanted_pcrs and this_pcrs[8] == (b"\x00" * PCR_SIZE):
@@ -90,8 +95,22 @@ def main():
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
 
+    if args.compare:
+        print("== Real vs computed PCR values ==")
+        real_pcrs = {idx: None for idx in this_pcrs}
+        errors = 0
+        for idx in wanted_pcrs:
+            real_pcrs[idx] = read_current_pcr(idx)
+            if real_pcrs[idx] == this_pcrs[idx]:
+                status = "+"
+            else:
+                errors += 1
+                status = "<BAD>"
+            print("PCR %2d:" % idx, to_hex(real_pcrs[idx]), to_hex(this_pcrs[idx]), status)
+        exit(errors > 0)
+
     if args.verbose or (not args.output):
-        print("== Final PCR values ==")
+        print("== Final computed & predicted PCR values ==")
         for idx in wanted_pcrs:
             print("PCR %2d:" % idx, to_hex(this_pcrs[idx]), "|", to_hex(next_pcrs[idx]))
 
