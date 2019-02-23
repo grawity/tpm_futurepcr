@@ -1,9 +1,12 @@
 import os
 import struct
+import sys
 
 class BinaryReader():
     def __init__(self, fh):
         self.fh = fh
+        self._N_size = struct.calcsize("@N")
+        self._P_size = struct.calcsize("@P")
 
     def _debug(self, typ, data):
         if os.environ.get("DEBUG"):
@@ -42,3 +45,9 @@ class BinaryReader():
 
     def read_u64_le(self):
         return self._read_fmt(8, "<Q", "quad")
+
+    def read_ptr(self):
+        return self._read_fmt(self._P_size, "@P", "ptr")
+
+    def read_size(self):
+        return self._read_fmt(self._N_size, "@N", "size")

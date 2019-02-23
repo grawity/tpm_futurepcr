@@ -8,10 +8,10 @@ SHA512_DIGEST_SIZE = 64
 def parse_efi_bsa_event(buf):
     buf = BinaryReader(io.BytesIO(buf))
     log = {}
-    log["image_location"]   = buf.read_u64_le() # EFI_PHYSICAL_ADDRESS
-    log["image_length"]     = buf.read_u64_le() # UINTN
-    log["image_lt_address"] = buf.read_u64_le() # UINTN
-    log["device_path_len"]  = buf.read_u64_le() # UINTN
+    log["image_location"]   = buf.read_ptr() # EFI_PHYSICAL_ADDRESS (pointer)
+    log["image_length"]     = buf.read_size() # UINTN (u64/u32 depending on arch)
+    log["image_lt_address"] = buf.read_size() # UINTN
+    log["device_path_len"]  = buf.read_size() # UINTN
     log["device_path"]      = buf.read(log["device_path_len"])
     log["device_path_vec"]  = parse_efi_device_path(log["device_path"])
     return log
