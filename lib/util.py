@@ -17,8 +17,8 @@ def hexdump(buf):
         text = [chr(b) if 0x20 < b < 0x7f else "." for b in row] + [" "] * 16
         print(offs, " ".join(hexs[:16]), "|%s|" % "".join(text[:16]))
 
-def hash_file(path, digest="sha1"):
-    h = getattr(hashlib, digest)()
+def hash_file(path, alg="sha1"):
+    h = hashlib.new(alg)
     with open(path, "rb") as fh:
         buf = True
         buf_size = 4 * 1024 * 1024
@@ -27,11 +27,11 @@ def hash_file(path, digest="sha1"):
             h.update(buf)
     return h.digest()
 
-def hash_pecoff(path, digest="sha1"):
+def hash_pecoff(path, alg="sha1"):
     with open(path, "rb") as fh:
         fpr = signify.fingerprinter.AuthenticodeFingerprinter(fh)
-        fpr.add_authenticode_hashers(getattr(hashlib, digest))
-        return fpr.hash()[digest]
+        fpr.add_authenticode_hashers(getattr(hashlib, alg))
+        return fpr.hash()[alg]
     return None
 
 def init_empty_pcrs():
@@ -45,12 +45,12 @@ def read_current_pcr(idx):
     res.check_returncode()
     return res.stdout
 
-def extend_pcr_with_hash(pcr_value, extend_value, digest="sha1"):
-    pcr_value = getattr(hashlib, digest)(pcr_value + extend_value).digest()
+def extend_pcr_with_hash(pcr_value, extend_value, alg="sha1"):
+    pcr_value = hashlib.new(alg, pcr_value + extend_value).digest()
     return pcr_value
 
-def extend_pcr_with_data(pcr_value, extend_data, digest="sha1"):
-    extend_value = getattr(hashlib, digest)(extend_data).digest()
+def extend_pcr_with_data(pcr_value, extend_data, alg="sha1"):
+    extend_value = hashlib.new(alg, extend_data).digest()
     return extend_pcr_with_hash(pcr_value, extend_value)
 
 def find_mountpoint_by_partuuid(partuuid):
