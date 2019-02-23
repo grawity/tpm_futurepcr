@@ -16,9 +16,15 @@ def loader_get_current_entry():
     return buf.decode("utf-16le").rstrip("\0")
 
 def _to_efi_path(path):
-    return path.replace(b"/", b"\\")
+    # kinda match systemd.git:src/boot/efi/util.c:stra_to_path()
+    # (except for the utf16 part, that'll be done on the whole cmdline)
+    path = path.replace(b"/", b"\\")
+    if not path.startswith(b"\\"):
+        path = b"\\" + path
+    return path
 
 def loader_parse_config(name, esp=None):
+    # match systemd.git:src/boot/efi/boot.c:line_get_key_value()
     esp = esp or "/boot"
     path = os.path.join(esp, "loader/entries/%s.conf" % name)
     config = []
@@ -37,6 +43,7 @@ def loader_parse_config(name, esp=None):
     return config
 
 def loader_get_cmdline(entry, esp=None):
+    # match systemd.git:src/boot/efi/boot.c:config_entry_add_from_file()
     config = loader_parse_config(entry, esp)
     initrd = []
     options = []
