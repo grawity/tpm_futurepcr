@@ -7,7 +7,7 @@ from pprint import pprint
 
 from .event_log import *
 from .systemd_boot import loader_get_next_cmdline
-from .tpm_constants import *
+from .tpm_constants import TpmEventType
 from .util import (
     hash_pecoff,
     init_empty_pcrs,
