@@ -6,6 +6,7 @@ import hashlib
 from pprint import pprint
 
 from .event_log import *
+from .systemd_boot import loader_get_next_cmdline
 from .tpm_constants import *
 from .util import (
     hash_pecoff,
@@ -67,14 +68,21 @@ def main():
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
 
-    # HACK: systemd-boot doesn't generate a log entry when extending PCR 8
-    # Assume that the kernel command line will remain exactly the same as for this boot.
+    # HACK: systemd-boot doesn't generate a log entry when extending PCR[8], do it ourselves
     if this_pcrs[8] == (b"\x00" * PCR_SIZE):
         this_pcrs[8] = read_current_pcr(8)
-        from .systemd_boot import loader_get_next_cmdline
-        cmdline = loader_get_next_cmdline()
-        cmdline = (cmdline.decode("utf-8") + "\0").encode("utf-16le")
-        next_pcrs[8] = extend_pcr_with_data(next_pcrs[8], cmdline)
+        try:
+            cmdline = loader_get_next_cmdline()
+        except FileNotFoundError:
+            # Either some of the EFI variables, or the ESP, or the .conf, are missing.
+            # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
+            pass
+        else:
+            if args.verbose:
+                print("-- extending PCR 8 with next systemd-boot cmdline --")
+                print("cmdline =", repr(cmdline))
+            cmdline = (cmdline.decode("utf-8") + "\0").encode("utf-16le")
+            next_pcrs[8] = extend_pcr_with_data(next_pcrs[8], cmdline)
 
     if args.verbose or (not args.output):
         print("== Final PCR values ==")
