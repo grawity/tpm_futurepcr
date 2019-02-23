@@ -53,7 +53,7 @@ class BinaryReader():
         return self._read_fmt(self._N_size, "@N", "size")
 
     def read_ptr_le(self):
-        return self.read_u64_le() if self._P_size == 8 else self.read_u32_le()
+        return self._read_fmt(self._P_size, "<Q" if self._P_size == 8 else "<L", "ptr")
 
     def read_size_le(self):
-        return self.read_u64_le() if self._N_size == 8 else self.read_u32_le()
+        return self._read_fmt(self._N_size, "<Q" if self._N_size == 8 else "<L", "size")
