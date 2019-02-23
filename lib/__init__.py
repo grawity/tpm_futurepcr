@@ -91,17 +91,19 @@ def main():
         print("== Real vs computed PCR values ==")
         real_pcrs = read_current_pcrs(wanted_pcrs)
         errors = 0
+        print(" "*7, "%-*s" % (PCR_SIZE*2, "REAL"), "|", "%-*s" % (PCR_SIZE*2, "COMPUTED"))
         for idx in wanted_pcrs:
             if real_pcrs[idx] == this_pcrs[idx]:
                 status = "+"
             else:
                 errors += 1
                 status = "<BAD>"
-            print("PCR %2d:" % idx, to_hex(real_pcrs[idx]), to_hex(this_pcrs[idx]), status)
+            print("PCR %2d:" % idx, to_hex(real_pcrs[idx]), "|", to_hex(this_pcrs[idx]), status)
         exit(errors > 0)
 
     if args.verbose or (not args.output):
         print("== Final computed & predicted PCR values ==")
+        print(" "*7, "%-*s" % (PCR_SIZE*2, "CURRENT"), "|", "%-*s" % (PCR_SIZE*2, "PREDICTED NEXT"))
         for idx in wanted_pcrs:
             print("PCR %2d:" % idx, to_hex(this_pcrs[idx]), "|", to_hex(next_pcrs[idx]))
 
