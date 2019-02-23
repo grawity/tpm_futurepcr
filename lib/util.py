@@ -35,8 +35,8 @@ def hash_pecoff(path, alg="sha1"):
     return None
 
 def init_empty_pcrs():
-    pcrs = {x: (b"\xFF" if x in {17, 18, 19, 20, 21, 22} else b"\x00") * PCR_SIZE
-            for x in range(NUM_PCRS)}
+    pcrs = {idx: (b"\xFF" if idx in {17, 18, 19, 20, 21, 22} else b"\x00") * PCR_SIZE
+            for idx in range(NUM_PCRS)}
     return pcrs
 
 def read_current_pcr(idx):

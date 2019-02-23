@@ -29,7 +29,7 @@ def main():
 
     if args.pcr_list:
         verbose_all_pcrs = False
-        wanted_pcrs = [int(x) for x in args.pcr_list.split(",")]
+        wanted_pcrs = [int(idx) for idx in args.pcr_list.split(",")]
     else:
         verbose_all_pcrs = True
         wanted_pcrs = [*range(NUM_PCRS)]
@@ -92,10 +92,10 @@ def main():
 
     if args.verbose or (not args.output):
         print("== Final PCR values ==")
-        for x in wanted_pcrs:
-            print("PCR %2d:" % x, to_hex(this_pcrs[x]), "|", to_hex(next_pcrs[x]))
+        for idx in wanted_pcrs:
+            print("PCR %2d:" % idx, to_hex(this_pcrs[idx]), "|", to_hex(next_pcrs[idx]))
 
     if args.output:
         with open(args.output, "wb") as fh:
-            for x in wanted_pcrs:
-                fh.write(next_pcrs[x])
+            for idx in wanted_pcrs:
+                fh.write(next_pcrs[idx])
