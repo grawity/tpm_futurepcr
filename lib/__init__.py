@@ -82,7 +82,7 @@ def main():
             if args.verbose:
                 print("PCR 8: synthesizing kernel cmdline event to match systemd-boot")
                 print("guessed next cmdline =", repr(cmdline))
-            cmdline = (cmdline.decode("utf-8") + "\0").encode("utf-16le")
+            cmdline = (cmdline + "\0").encode("utf-16le")
             next_pcrs[idx] = extend_pcr_with_data(next_pcrs[idx], cmdline)
         if args.verbose:
             print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
