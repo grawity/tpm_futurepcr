@@ -7,15 +7,7 @@ from .systemd_boot import (
     loader_get_next_cmdline,
 )
 from .tpm_constants import TpmEventType
-from .util import (
-    hash_pecoff,
-    init_empty_pcrs,
-    read_current_pcr,
-    extend_pcr_with_hash,
-    extend_pcr_with_data,
-    NUM_PCRS,
-    PCR_SIZE
-)
+from .util import *
 
 def main():
     parser = argparse.ArgumentParser()
@@ -97,10 +89,9 @@ def main():
 
     if args.compare:
         print("== Real vs computed PCR values ==")
-        real_pcrs = {idx: None for idx in this_pcrs}
+        real_pcrs = read_current_pcrs(wanted_pcrs)
         errors = 0
         for idx in wanted_pcrs:
-            real_pcrs[idx] = read_current_pcr(idx)
             if real_pcrs[idx] == this_pcrs[idx]:
                 status = "+"
             else:

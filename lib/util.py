@@ -40,10 +40,19 @@ def init_empty_pcrs():
     return pcrs
 
 def read_current_pcr(idx):
-    res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%d" % idx, "-Q", "-o", "/dev/stdout"],
+    res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%d" % idx,
+                                          "-Q", "-o", "/dev/stdout"],
                          stdout=subprocess.PIPE)
     res.check_returncode()
     return res.stdout
+
+def read_current_pcrs(idxs):
+    res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%s" % ",".join(map(str, idxs)),
+                                          "-Q", "-o", "/dev/stdout"],
+                         stdout=subprocess.PIPE)
+    res.check_returncode()
+    buf = res.stdout
+    return {idx: buf[n*PCR_SIZE:(n+1)*PCR_SIZE] for (n, idx) in enumerate(idxs)}
 
 def extend_pcr_with_hash(pcr_value, extend_value, alg="sha1"):
     pcr_value = hashlib.new(alg, pcr_value + extend_value).digest()
