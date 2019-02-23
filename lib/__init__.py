@@ -55,8 +55,10 @@ def main():
                 print("this event extend value =", to_hex(this_extend_value))
                 print("guessed extend value =", to_hex(next_extend_value))
 
-        this_pcrs[idx] = extend_pcr_with_hash(this_pcrs[idx], this_extend_value)
-        next_pcrs[idx] = extend_pcr_with_hash(next_pcrs[idx], next_extend_value)
+        if event["event_type"] != TpmEventType.NO_ACTION:
+            this_pcrs[idx] = extend_pcr_with_hash(this_pcrs[idx], this_extend_value)
+            next_pcrs[idx] = extend_pcr_with_hash(next_pcrs[idx], next_extend_value)
+
         if args.verbose:
             print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
