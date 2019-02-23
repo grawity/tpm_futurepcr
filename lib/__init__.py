@@ -28,8 +28,10 @@ def main():
     args = parser.parse_args()
 
     if args.pcr_list:
+        verbose_all_pcrs = False
         wanted_pcrs = [int(x) for x in args.pcr_list.split(",")]
     else:
+        verbose_all_pcrs = True
         wanted_pcrs = [*range(NUM_PCRS)]
 
     this_pcrs = init_empty_pcrs()
@@ -40,7 +42,8 @@ def main():
         this_extend_value = event["pcr_extend_value"]
         next_extend_value = this_extend_value
 
-        if args.verbose and idx in wanted_pcrs:
+        _verbose_pcr = (args.verbose and (verbose_all_pcrs or idx in wanted_pcrs))
+        if _verbose_pcr:
             show_log_entry(event)
 
         if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
@@ -48,7 +51,7 @@ def main():
             unix_path = device_path_to_unix_path(event_data["device_path_vec"])
             file_hash = hash_pecoff(unix_path, "sha1")
             next_extend_value = file_hash
-            if args.verbose and idx in wanted_pcrs:
+            if _verbose_pcr:
                 print("-- extending with coff hash --")
                 print("file path =", unix_path)
                 print("file hash =", to_hex(file_hash))
@@ -59,7 +62,7 @@ def main():
             this_pcrs[idx] = extend_pcr_with_hash(this_pcrs[idx], this_extend_value)
             next_pcrs[idx] = extend_pcr_with_hash(next_pcrs[idx], next_extend_value)
 
-        if args.verbose and idx in wanted_pcrs:
+        if _verbose_pcr:
             print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
