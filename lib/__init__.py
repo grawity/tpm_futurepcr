@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import sys
-import os
-import hashlib
-from pprint import pprint
 
 from .event_log import *
 from .systemd_boot import loader_get_next_cmdline
@@ -17,11 +13,6 @@ from .util import (
     NUM_PCRS,
     PCR_SIZE
 )
-
-quiet = False
-
-# h:s16 H:u16 l:s32 L:u32
-# TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
 
 def main():
     parser = argparse.ArgumentParser()

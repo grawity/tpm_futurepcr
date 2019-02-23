@@ -33,6 +33,7 @@ def show_log_entry(e):
     print()
 
 # ~/src/linux/include/linux/tpm_eventlog.h
+# TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
 
 def enum_log_entries():
     tpm_ver = 1 # Linux always exports v1 SHA1-only events for now
