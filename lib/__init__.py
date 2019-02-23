@@ -67,7 +67,8 @@ def main():
     # HACK: systemd-boot doesn't generate a log entry when extending PCR[8], do it ourselves
     # (not sure why, as it calls HashLogExtendEvent and there should be an EV_IPL(13) event)
     if 8 in wanted_pcrs and this_pcrs[8] == (b"\x00" * PCR_SIZE):
-        print("PCR 8: synthesizing kernel cmdline event to match systemd-boot")
+        if args.verbose:
+            print("PCR 8: synthesizing kernel cmdline event to match systemd-boot")
         idx = 8
         this_pcrs[idx] = read_current_pcr(idx)
         try:
