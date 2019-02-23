@@ -69,8 +69,9 @@ def main():
             print()
 
     # HACK: systemd-boot doesn't generate a log entry when extending PCR[8], do it ourselves
-    if this_pcrs[8] == (b"\x00" * PCR_SIZE):
-        this_pcrs[8] = read_current_pcr(8)
+    if 8 in wanted_pcrs and this_pcrs[8] == (b"\x00" * PCR_SIZE):
+        idx = 8
+        this_pcrs[idx] = read_current_pcr(idx)
         try:
             cmdline = loader_get_next_cmdline()
         except FileNotFoundError:
@@ -79,10 +80,14 @@ def main():
             pass
         else:
             if args.verbose:
-                print("-- extending PCR 8 with next systemd-boot cmdline --")
-                print("cmdline =", repr(cmdline))
+                print("PCR 8: synthesizing kernel cmdline event to match systemd-boot")
+                print("guessed next cmdline =", repr(cmdline))
             cmdline = (cmdline.decode("utf-8") + "\0").encode("utf-16le")
-            next_pcrs[8] = extend_pcr_with_data(next_pcrs[8], cmdline)
+            next_pcrs[idx] = extend_pcr_with_data(next_pcrs[idx], cmdline)
+        if args.verbose:
+            print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
+            print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
+            print()
 
     if args.verbose or (not args.output):
         print("== Final PCR values ==")
