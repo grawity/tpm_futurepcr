@@ -45,6 +45,14 @@ def read_current_pcr(idx):
     res.check_returncode()
     return res.stdout
 
+def extend_pcr_with_hash(pcr_value, extend_value, digest="sha1"):
+    pcr_value = getattr(hashlib, digest)(pcr_value + extend_value).digest()
+    return pcr_value
+
+def extend_pcr_with_data(pcr_value, extend_data, digest="sha1"):
+    extend_value = getattr(hashlib, digest)(extend_data).digest()
+    return extend_pcr_with_hash(pcr_value, extend_value)
+
 def find_mountpoint_by_partuuid(partuuid):
     res = subprocess.run(["findmnt", "-S", "PARTUUID=%s" % partuuid, "-o", "TARGET", "-r", "-n"],
                          stdout=subprocess.PIPE)

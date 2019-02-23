@@ -7,7 +7,15 @@ from pprint import pprint
 
 from .event_log import *
 from .tpm_constants import *
-from .util import (hash_pecoff, init_empty_pcrs, read_current_pcr, NUM_PCRS, PCR_SIZE)
+from .util import (
+    hash_pecoff,
+    init_empty_pcrs,
+    read_current_pcr,
+    extend_pcr_with_hash,
+    extend_pcr_with_data,
+    NUM_PCRS,
+    PCR_SIZE
+)
 
 quiet = False
 
@@ -52,8 +60,8 @@ def main():
                 print("this event extend value =", to_hex(this_extend_value))
                 print("guessed extend value =", to_hex(next_extend_value))
 
-        this_pcrs[idx] = hashlib.sha1(this_pcrs[idx] + this_extend_value).digest()
-        next_pcrs[idx] = hashlib.sha1(next_pcrs[idx] + next_extend_value).digest()
+        this_pcrs[idx] = extend_pcr_with_hash(this_pcrs[idx], this_extend_value)
+        next_pcrs[idx] = extend_pcr_with_hash(next_pcrs[idx], next_extend_value)
         if args.verbose:
             print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
@@ -66,8 +74,7 @@ def main():
         from .systemd_boot import loader_get_next_cmdline
         cmdline = loader_get_next_cmdline()
         cmdline = (cmdline.decode("utf-8") + "\0").encode("utf-16le")
-        next_extend_value = hashlib.sha1(cmdline).digest()
-        next_pcrs[8] = hashlib.sha1(next_pcrs[8] + next_extend_value).digest()
+        next_pcrs[8] = extend_pcr_with_data(next_pcrs[8], cmdline)
 
     if args.verbose or (not args.output):
         print("== Final PCR values ==")
