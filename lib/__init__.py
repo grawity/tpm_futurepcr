@@ -63,7 +63,11 @@ def main():
     # Assume that the kernel command line will remain exactly the same as for this boot.
     if this_pcrs[8] == (b"\x00" * PCR_SIZE):
         this_pcrs[8] = read_current_pcr(8)
-        next_pcrs[8] = this_pcrs[8]
+        from .systemd_boot import loader_get_next_cmdline
+        cmdline = loader_get_next_cmdline()
+        cmdline = (cmdline.decode("utf-8") + "\0").encode("utf-16le")
+        next_extend_value = hashlib.sha1(cmdline).digest()
+        next_pcrs[8] = hashlib.sha1(next_pcrs[8] + next_extend_value).digest()
 
     if args.verbose or (not args.output):
         print("== Final PCR values ==")
