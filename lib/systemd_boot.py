@@ -1,10 +1,15 @@
 import os
+from .util import find_mountpoint_by_partuuid
 
 def _efivar_read(name, uuid):
     path = "/sys/firmware/efi/efivars/%s-%s" % (name, uuid)
     with open(path, "rb") as fh:
         buf = fh.read()
         return buf[4:]
+
+def loader_get_esp_partuuid():
+    buf = _efivar_read("LoaderDevicePartUUID", "4a67b082-0a4c-41cf-b6c7-440b29bb8c4f")
+    return buf.decode("utf-16le").rstrip("\0")
 
 def loader_get_current_entry():
     buf = _efivar_read("LoaderEntrySelected", "4a67b082-0a4c-41cf-b6c7-440b29bb8c4f")
@@ -31,8 +36,7 @@ def loader_parse_config(name, esp=None):
             config.append((key, val))
     return config
 
-def loader_get_next_cmdline(esp=None):
-    entry = loader_get_current_entry()
+def loader_get_cmdline(entry, esp=None):
     config = loader_parse_config(entry, esp)
     initrd = []
     options = []
@@ -42,3 +46,8 @@ def loader_get_next_cmdline(esp=None):
         elif key == b"options":
             options.append(val)
     return b" ".join([*initrd, *options])
+
+def loader_get_next_cmdline(esp=None):
+    entry = loader_get_current_entry()
+    esp = find_mountpoint_by_partuuid(loader_get_esp_partuuid())
+    return loader_get_cmdline(entry, esp)

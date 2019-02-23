@@ -54,7 +54,8 @@ def extend_pcr_with_data(pcr_value, extend_data, alg="sha1"):
     return extend_pcr_with_hash(pcr_value, extend_value)
 
 def find_mountpoint_by_partuuid(partuuid):
-    res = subprocess.run(["findmnt", "-S", "PARTUUID=%s" % partuuid, "-o", "TARGET", "-r", "-n"],
+    res = subprocess.run(["findmnt", "-S", "PARTUUID=" + str(partuuid).lower(),
+                                     "-o", "TARGET", "-r", "-n"],
                          stdout=subprocess.PIPE)
     res.check_returncode()
     return res.stdout.splitlines()[0].decode()
