@@ -1,13 +1,29 @@
 import enum
 
 class TpmEventType(enum.IntEnum):
+    # BIOS events <https://www.trustedcomputinggroup.org/wp-content/uploads/TCG_PCClientImplementation_1-21_1_00.pdf#page=98>
+    PREBOOT_CERT                    = 0x00000000 # deprecated
     POST_CODE                       = 0x00000001
-    SEPARATOR                       = 0x00000004
+    UNUSED                          = 0x00000002 # reserved
+    NO_ACTION                       = 0x00000003 # noextend
+    SEPARATOR                       = 0x00000004 # BIOS: extend 0-7
+    ACTION                          = 0x00000005
+    EVENT_TAG                       = 0x00000006
     S_CRTM_CONTENTS                 = 0x00000007
     S_CRTM_VERSION                  = 0x00000008
     CPU_MICROCODE                   = 0x00000009
+    PLATFORM_CONFIG_FLAGS           = 0x0000000A
     TABLE_OF_DEVICES                = 0x0000000B
+    COMPACT_HASH                    = 0x0000000C
+    IPL                             = 0x0000000D
+    IPL_PARTITION_DATA              = 0x0000000E
+    NONHOST_CODE                    = 0x0000000F
+    NONHOST_CONFIG                  = 0x00000010
+    NONHOST_INFO                    = 0x00000011
+    OMIT_BOOT_DEVICE_EVENTS         = 0x00000012
 
+    # UEFI events <https://trustedcomputinggroup.org/wp-content/uploads/TCG_EFI_Platform_1_22_Final_-v15.pdf#page=32>
+    EFI_EVENT_BASE                  = 0x80000000
     EFI_VARIABLE_DRIVER_CONFIG      = 0x80000001
     EFI_VARIABLE_BOOT               = 0x80000002
     EFI_BOOT_SERVICES_APPLICATION   = 0x80000003
@@ -17,6 +33,7 @@ class TpmEventType(enum.IntEnum):
     EFI_ACTION                      = 0x80000007
     EFI_PLATFORM_FIRMWARE_BLOB      = 0x80000008
     EFI_HANDOFF_TABLES              = 0x80000009
+    EFI_VARIABLE_AUTHORITY          = 0x800000E0
 
 class TpmPostCode():
     POST_CODE   = b"POST CODE"
@@ -26,7 +43,7 @@ class TpmPostCode():
     UEFI_PI     = b"UEFI PI"
     OPROM       = b"Embedded Option ROM"
 
-class TpmCallEvent():
+class TpmEfiActionString():
     CALLING_EFI_APPLICATION         = b"Calling EFI Application from Boot Option"
     RETURNING_FROM_EFI_APPLICATION  = b"Returning from EFI Application from Boot Option"
     EXIT_BOOT_SERVICES_INVOCATION   = b"Exit Boot Services Invocation"
