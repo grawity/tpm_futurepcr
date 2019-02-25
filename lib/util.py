@@ -39,16 +39,38 @@ def init_empty_pcrs():
             for idx in range(NUM_PCRS)}
     return pcrs
 
+def is_tpm2():
+    with open("/sys/class/tpm/tpm0/caps", "r") as fh:
+        for line in fh:
+            if line.startswith("TCG version: 2."):
+                # XXX: untested
+                return True
+            if line.startswith("TCG version: 1.2"):
+                return False
+    return True
+
 def read_current_pcr(idx):
     return read_current_pcrs([idx])[idx]
 
 def read_current_pcrs(idxs):
-    res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%s" % ",".join(map(str, idxs)),
-                                          "-Q", "-o", "/dev/stdout"],
-                         stdout=subprocess.PIPE)
-    res.check_returncode()
-    buf = res.stdout
-    return {idx: buf[n*PCR_SIZE:(n+1)*PCR_SIZE] for (n, idx) in enumerate(idxs)}
+    # XXX: if TPM 2.0 still exposes the same sysfs interface, better just use it
+    if is_tpm2():
+        res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%s" % ",".join(map(str, idxs)),
+                                              "-Q", "-o", "/dev/stdout"],
+                             stdout=subprocess.PIPE)
+        res.check_returncode()
+        buf = res.stdout
+        return {idx: buf[n*PCR_SIZE:(n+1)*PCR_SIZE] for (n, idx) in enumerate(idxs)}
+    else:
+        pcrs = {}
+        with open("/sys/class/tpm/tpm0/pcrs", "r") as fh:
+            for line in fh:
+                if line.startswith("PCR-"):
+                    idx, buf = line.strip().split(": ")
+                    idx = int(idx[4:], 10)
+                    buf = bytes.fromhex(buf)
+                    pcrs[idx] = buf
+        return pcrs
 
 def extend_pcr_with_hash(pcr_value, extend_value, alg="sha1"):
     pcr_value = hashlib.new(alg, pcr_value + extend_value).digest()
