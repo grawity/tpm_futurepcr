@@ -40,11 +40,7 @@ def init_empty_pcrs():
     return pcrs
 
 def read_current_pcr(idx):
-    res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%d" % idx,
-                                          "-Q", "-o", "/dev/stdout"],
-                         stdout=subprocess.PIPE)
-    res.check_returncode()
-    return res.stdout
+    return read_current_pcrs([idx])[idx]
 
 def read_current_pcrs(idxs):
     res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%s" % ",".join(map(str, idxs)),
