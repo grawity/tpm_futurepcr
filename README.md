@@ -1,4 +1,4 @@
-The `tpm_futurepcr` script allows guessing what the future PCR[4] value will be after a kernel upgrade, before you reboot. This is useful when your rootfs is LUKS-encrypted with a key sealed by the TPM against PCR[4] (among others).
+The `tpm2_futurepcr` script allows guessing what the future PCR[4] value will be after a kernel upgrade, before you reboot. This is useful when your rootfs is LUKS-encrypted with a key sealed by the TPM against PCR[4] (among others).
 
 This script only recognizes measurements done by native UEFI LoadImage() – i.e. hashes of PE/COFF executables such as vmlinuz.efi. (Although it does parse the TPM 1.2 event log, it does not (yet) recognize measurements done by TrustedGRUB on BIOS systems, and in fact I'm not entirely sure whether the entire premise of sealing data against user-specified PCR values is even _possible_ in the TPM 1.2 API.)
 
@@ -21,7 +21,7 @@ This automatically uses current PCR values, and can be written to do so explicit
     tpm2_pcrlist -L sha1:0,2,4,7 -Q -o pcrvalues.bin
     tpm2_createpolicy -P -L sha1:0,2,4,7 -F pcrvalues.bin -f policy.bin
 
-To do the same with *future* PCR values, use tpm\_futurepcr:
+To do the same with *future* PCR values, use tpm2\_futurepcr:
 
-    tpm_futurepcr -L 0,2,4,7 -o pcrvalues.bin
+    tpm2_futurepcr -L 0,2,4,7 -o pcrvalues.bin
     tpm2_createpolicy -P -L sha1:0,2,4,7 -F pcrvalues.bin -f policy.bin
