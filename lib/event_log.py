@@ -27,9 +27,9 @@ def show_log_entry(e):
         ed = parse_efi_bsa_event(event_data)
         #pprint(ed)
     else:
-        hexdump(event_data[:16])
-        if len(event_data) > 16:
-            print("(%d more bytes)" % (len(event_data) - 16))
+        hexdump(event_data[:32])
+        if len(event_data) > 32:
+            print("(%d more bytes)" % (len(event_data) - 32))
     print()
 
 # ~/src/linux/include/linux/tpm_eventlog.h
