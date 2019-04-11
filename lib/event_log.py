@@ -20,7 +20,7 @@ def show_log_entry(e):
     print("PCR %d: extend %s" % (e["pcr_idx"], to_hex(e["pcr_extend_value"])))
     event_type = e["event_type"]
     event_type_str = TpmEventType(event_type)
-    print("Event type: %x <%s>" % (event_type, event_type_str))
+    print("Event type: %08X <%s>" % (event_type, event_type_str))
     event_data = e["event_data"]
     if event_type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
         hexdump(event_data)
