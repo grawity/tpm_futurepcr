@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import sys
 
 from .event_log import *
 from .systemd_boot import (
@@ -45,6 +46,14 @@ def main():
         if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
             event_data = parse_efi_bsa_event(event["event_data"])
             unix_path = device_path_to_unix_path(event_data["device_path_vec"])
+            if not unix_path:
+                # this might be a firmware item such as the boot menu
+                if args.verbose:
+                    print("entry didn't map to a Linux path")
+                    continue
+                else:
+                    print("exiting due to unusual boot process events", file=sys.stderr)
+                    exit(1)
             file_hash = hash_pecoff(unix_path, "sha1")
             next_extend_value = file_hash
             if _verbose_pcr:
