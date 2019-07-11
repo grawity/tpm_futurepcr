@@ -1,6 +1,5 @@
 import os
 from .util import (
-    extend_pcr_with_data,
     find_mountpoint_by_partuuid,
 )
 
@@ -62,6 +61,6 @@ def loader_get_next_cmdline():
     esp = find_mountpoint_by_partuuid(loader_get_esp_partuuid())
     return loader_get_cmdline(entry, esp)
 
-def loader_extend_pcr8(pcr_value, cmdline):
+def loader_encode_pcr8(cmdline):
     cmdline = (cmdline + "\0").encode("utf-16le")
-    return extend_pcr_with_data(pcr_value, cmdline)
+    return cmdline

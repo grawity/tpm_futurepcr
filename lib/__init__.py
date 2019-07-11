@@ -4,7 +4,7 @@ import sys
 
 from .event_log import *
 from .systemd_boot import (
-    loader_extend_pcr8,
+    loader_encode_pcr8,
     loader_get_next_cmdline,
 )
 from .tpm_constants import TpmEventType
@@ -85,7 +85,8 @@ def main():
             cmdline = loader_get_next_cmdline()
             if args.verbose:
                 print("guessed next cmdline:", cmdline)
-            next_pcrs[idx] = loader_extend_pcr8(next_pcrs[idx], cmdline)
+            cmdline = loader_encode_pcr8(cmdline)
+            next_pcrs[idx] = extend_pcr_with_data(next_pcrs[idx], cmdline)
         except FileNotFoundError:
             # Either some of the EFI variables, or the ESP, or the .conf, are missing.
             # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
