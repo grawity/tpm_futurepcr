@@ -32,8 +32,6 @@ def main():
     this_pcrs = init_empty_pcrs()
     next_pcrs = {**this_pcrs}
 
-    # TODO: Figure out why PCR[5] does not match the computed one.
-
     for event in enum_log_entries():
         idx = event["pcr_idx"]
         this_extend_value = event["pcr_extend_value"]
@@ -91,7 +89,7 @@ def main():
 
     # HACK: systemd-boot doesn't generate a log entry when extending PCR[8], do it ourselves
     # (not sure why, as it calls HashLogExtendEvent and there should be an EV_IPL(13) event)
-    # 2019-06-07: Probably fixed in systemd commit v242-780-gf8e54bf319
+    # 2019-06-07: Probably fixed in systemd commit v242-780-gf8e54bf319 and/or kernel 5.2
     if 8 in wanted_pcrs and this_pcrs[8] == (b"\x00" * PCR_SIZE):
         if args.verbose:
             print("PCR 8: synthesizing kernel cmdline event to match systemd-boot")
