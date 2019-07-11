@@ -17,6 +17,11 @@ def hexdump(buf):
         text = [chr(b) if 0x20 < b < 0x7f else "." for b in row] + [" "] * 16
         print(offs, " ".join(hexs[:16]), "|%s|" % "".join(text[:16]))
 
+def hash_bytes(buf, alg="sha1"):
+    h = hashlib.new(alg)
+    h.update(buf)
+    return h.digest()
+
 def hash_file(path, alg="sha1"):
     h = hashlib.new(alg)
     with open(path, "rb") as fh:

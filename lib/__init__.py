@@ -63,6 +63,22 @@ def main():
                 print("this event extend value =", to_hex(this_extend_value))
                 print("guessed extend value =", to_hex(next_extend_value))
 
+        if event["event_type"] == TpmEventType.IPL:
+            try:
+                cmdline = loader_get_next_cmdline()
+                if args.verbose:
+                    old_cmdline = event["event_data"][:-1].decode("utf-16le")
+                    print("-- extending with systemd-boot cmdline --")
+                    print("this cmdline:", old_cmdline)
+                    print("next cmdline:", cmdline)
+                cmdline = loader_encode_pcr8(cmdline)
+                next_extend_value = hash_bytes(cmdline)
+            except FileNotFoundError:
+                # Either some of the EFI variables, or the ESP, or the .conf, are missing.
+                # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
+                if args.verbose:
+                    print("-- not touching non-systemd IPL event --")
+
         if event["event_type"] != TpmEventType.NO_ACTION:
             this_pcrs[idx] = extend_pcr_with_hash(this_pcrs[idx], this_extend_value)
             next_pcrs[idx] = extend_pcr_with_hash(next_pcrs[idx], next_extend_value)
