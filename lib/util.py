@@ -1,4 +1,5 @@
 import hashlib
+import os
 import signify.fingerprinter
 import subprocess
 
