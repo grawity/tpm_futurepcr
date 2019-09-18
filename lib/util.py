@@ -60,14 +60,26 @@ def is_tpm2():
                 return False
     return True
 
+def in_path(exe):
+    for p in os.environ["PATH"].split(":"):
+        if p and os.path.exists("%s/%s" % (p, exe)):
+            return True
+    return False
+
 def read_current_pcr(idx):
     return read_current_pcrs([idx])[idx]
 
 def read_current_pcrs(idxs):
     if is_tpm2():
-        res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%s" % ",".join(map(str, idxs)),
-                                              "-Q", "-o", "/dev/stdout"],
-                             stdout=subprocess.PIPE)
+        if in_path("tpm2_pcrread"):
+            # utils 4.0
+            res = subprocess.run(["tpm2_pcrread", "sha1:%s" % ",".join(map(str, idxs)),
+                                                  "-Q", "-o", "/dev/stdout"],
+                                 stdout=subprocess.PIPE)
+        elif in_path("tpm2_pcrlist"):
+            res = subprocess.run(["tpm2_pcrlist", "-L", "sha1:%s" % ",".join(map(str, idxs)),
+                                                  "-Q", "-o", "/dev/stdout"],
+                                 stdout=subprocess.PIPE)
         res.check_returncode()
         buf = res.stdout
         return {idx: buf[n*PCR_SIZE:(n+1)*PCR_SIZE] for (n, idx) in enumerate(idxs)}
