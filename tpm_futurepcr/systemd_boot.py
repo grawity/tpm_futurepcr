@@ -1,23 +1,18 @@
 import os
 from .util import (
     find_mountpoint_by_partuuid,
+    read_efi_variable,
     read_pecoff_section,
 )
 
 EFIVAR_GUID_REDHAT = "4a67b082-0a4c-41cf-b6c7-440b29bb8c4f"
 
-def _efivar_read(name, uuid):
-    path = "/sys/firmware/efi/efivars/%s-%s" % (name, uuid)
-    with open(path, "rb") as fh:
-        buf = fh.read()
-        return buf[4:]
-
 def loader_get_esp_partuuid():
-    buf = _efivar_read("LoaderDevicePartUUID", EFIVAR_GUID_REDHAT)
+    buf = read_efi_variable("LoaderDevicePartUUID", EFIVAR_GUID_REDHAT)
     return buf.decode("utf-16le").rstrip("\0")
 
 def loader_get_current_entry():
-    buf = _efivar_read("LoaderEntrySelected", EFIVAR_GUID_REDHAT)
+    buf = read_efi_variable("LoaderEntrySelected", EFIVAR_GUID_REDHAT)
     return buf.decode("utf-16le").rstrip("\0")
 
 def _to_efi_path(path):
@@ -64,7 +59,7 @@ def sd_stub_get_cmdline(path):
 
 def loader_get_next_cmdline(last_efi_binary=None):
     try:
-        sd_stub_present = _efivar_read("StubInfo", EFIVAR_GUID_REDHAT)
+        sd_stub_present = read_efi_variable("StubInfo", EFIVAR_GUID_REDHAT)
     except FileNotFoundError:
         sd_stub_present = None
 
