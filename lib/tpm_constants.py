@@ -1,5 +1,47 @@
 import enum
 
+class TpmAlgorithm(enum.IntEnum):
+    # https://trustedcomputinggroup.org/resource/tcg-algorithm-registry/
+    RSA             = 0x0001
+    TDES            = 0x0003
+    SHA1            = 0x0004
+    HMAC            = 0x0005
+    AES             = 0x0006
+    MGF1            = 0x0007
+    KEYEDHASH       = 0x0008
+    XOR             = 0x000A
+    SHA256          = 0x000B
+    SHA384          = 0x000C
+    SHA512          = 0x000D
+    NULL            = 0x0010
+    SM3_256         = 0x0012
+    SM4             = 0x0013
+    RSASSA          = 0x0014
+    RSAES           = 0x0015
+    RSAPSS          = 0x0016
+    OAEP            = 0x0017
+    ECDSA           = 0x0018
+    ECDH            = 0x0019
+    ECDAA           = 0x001A
+    SM2             = 0x001B
+    ECSCHNORR       = 0x001C
+    ECMQV           = 0x001D
+    KDF1_SP800_56A  = 0x0020
+    KDF2            = 0x0021
+    KDF1_SP800_108  = 0x0022
+    ECC             = 0x0023
+    SYMCIPHER       = 0x0025
+    CAMELLIA        = 0x0026
+    SHA3_256        = 0x0027
+    SHA3_384        = 0x0028
+    SHA3_512        = 0x0029
+    CMAC            = 0x003F
+    CTR             = 0x0040
+    OFB             = 0x0041
+    CBC             = 0x0042
+    CFB             = 0x0043
+    ECB             = 0x0044
+
 class TpmEventType(enum.IntEnum):
     # BIOS events <https://www.trustedcomputinggroup.org/wp-content/uploads/TCG_PCClientImplementation_1-21_1_00.pdf#page=98>
     PREBOOT_CERT                    = 0x00000000 # deprecated
