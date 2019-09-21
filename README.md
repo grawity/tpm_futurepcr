@@ -10,6 +10,11 @@ This script will understand the event log in both SHA1-only (TPM 1.2) and Crypto
 
 Neither systemd-boot nor EFISTUB currently measure the initramfs images. It is not safe to rely on PCR[4] _unless_ you are using a combined kernel+initramfs file (such as the one produced by mksignkernels), or you are using a bootloader which measures the initramfs separately.
 
+### Dependencies
+
+ * python-signify (for calculating Authenticode digests)
+ * binutils/objcopy (for parsing systemd-stub kernel images)
+
 ### Installation
   
 `python setup.py install`
