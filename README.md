@@ -4,7 +4,7 @@ This script only recognizes measurements done by native UEFI LoadImage() – i.e
 
 As an additional hack, this script also recognizes systemd-boot and updates PCR[8] according to the future kernel command line.
 
-This script was only tested on systems which provide the event log in the TPM 1.2 format (which is SHA-1 only), and for that reason only outputs SHA-1 PCRs. It does have _untested_ code for parsing the TPM 2.0 event log format (hash-agile), but I don't have any systems offering it.
+This script will understand the event log in both SHA1-only (TPM 1.2) and Crypto-Agile (TPM 2.0, Linux kernel 5.3+) formats. However, the current version only works with and outputs SHA-1 PCRs. In the future, support for selecting multiple digest algorithms will be added.
 
 ### Installation
   
