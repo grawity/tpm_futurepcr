@@ -31,6 +31,7 @@ def main():
 
     this_pcrs = init_empty_pcrs()
     next_pcrs = {**this_pcrs}
+    last_efi_binary = None
 
     for event in enum_log_entries():
         idx = event["pcr_idx"]
@@ -54,6 +55,7 @@ def main():
                     exit(1)
             file_hash = hash_pecoff(unix_path, "sha1")
             next_extend_value = file_hash
+            last_efi_binary = unix_path
             if _verbose_pcr:
                 print("-- extending with coff hash --")
                 print("file path =", unix_path)
@@ -63,7 +65,7 @@ def main():
 
         if event["event_type"] == TpmEventType.IPL:
             try:
-                cmdline = loader_get_next_cmdline()
+                cmdline = loader_get_next_cmdline(last_efi_binary)
                 if args.verbose:
                     old_cmdline = event["event_data"][:-1].decode("utf-16le")
                     print("-- extending with systemd-boot cmdline --")

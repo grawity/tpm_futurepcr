@@ -1,6 +1,7 @@
 import os
 from .util import (
     find_mountpoint_by_partuuid,
+    read_coff_section,
 )
 
 def _efivar_read(name, uuid):
@@ -56,10 +57,24 @@ def loader_get_cmdline(entry, esp=None):
             options.append(val)
     return " ".join([*initrd, *options])
 
-def loader_get_next_cmdline():
-    entry = loader_get_current_entry()
-    esp = find_mountpoint_by_partuuid(loader_get_esp_partuuid())
-    return loader_get_cmdline(entry, esp)
+def sd_stub_get_cmdline(path):
+    return read_coff_section(path, ".cmdline").decode("utf-8")
+
+def loader_get_next_cmdline(last_efi_binary=None):
+    try:
+        sd_stub_present = _efivar_read("StubInfo", "4a67b082-0a4c-41cf-b6c7-440b29bb8c4f")
+    except FileNotFoundError:
+        sd_stub_present = None
+
+    if sd_stub_present:
+        # Booted using mksignkernels/systemd-stub, so the cmdline is embedded in
+        # the kernel .efi binary. We don't know its path so assume it's the last
+        # binary we've seen in the event log.
+        return sd_stub_get_cmdline(last_efi_binary)
+    else:
+        entry = loader_get_current_entry()
+        esp = find_mountpoint_by_partuuid(loader_get_esp_partuuid())
+        return loader_get_cmdline(entry, esp)
 
 def loader_encode_pcr8(cmdline):
     cmdline = (cmdline + "\0").encode("utf-16le")

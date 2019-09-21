@@ -108,3 +108,12 @@ def find_mountpoint_by_partuuid(partuuid):
                          stdout=subprocess.PIPE)
     res.check_returncode()
     return res.stdout.splitlines()[0].decode()
+
+def read_coff_section(path, section):
+    with open(path, "rb"):
+        res = subprocess.run(["objcopy", path, "/dev/null",
+                                         "--dump-section",
+                                         "%s=/dev/stdout" % section],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL)
+        return res.stdout
