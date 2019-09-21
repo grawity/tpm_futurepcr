@@ -14,6 +14,7 @@ Neither systemd-boot nor EFISTUB currently measure the initramfs images. It is n
 
  * python-signify (for calculating Authenticode digests)
  * binutils/objcopy (for parsing systemd-stub kernel images)
+ * tpm2-tools (for reading current PCR values)
 
 ### Installation
   
