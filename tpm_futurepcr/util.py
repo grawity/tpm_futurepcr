@@ -41,6 +41,15 @@ def hash_pecoff(path, alg="sha1"):
         return fpr.hash()[alg]
     return None
 
+def read_pecoff_section(path, section):
+    with tempfile.NamedTemporaryFile() as tmp:
+        res = subprocess.run(["objcopy", path, tmp.name,
+                                         "--only-section", "I hate objcopy",
+                                         "--dump-section", "%s=/dev/stdout" % section],
+                             stdout=subprocess.PIPE)
+        res.check_returncode()
+        return res.stdout
+
 def init_empty_pcrs():
     pcrs = {idx: (b"\xFF" if idx in {17, 18, 19, 20, 21, 22} else b"\x00") * PCR_SIZE
             for idx in range(NUM_PCRS)}
@@ -109,12 +118,3 @@ def find_mountpoint_by_partuuid(partuuid):
                          stdout=subprocess.PIPE)
     res.check_returncode()
     return res.stdout.splitlines()[0].decode()
-
-def read_coff_section(path, section):
-    with tempfile.NamedTemporaryFile() as tmp:
-        res = subprocess.run(["objcopy", path, tmp.name,
-                                         "--only-section", "I hate objcopy",
-                                         "--dump-section", "%s=/dev/stdout" % section],
-                             stdout=subprocess.PIPE)
-        res.check_returncode()
-        return res.stdout

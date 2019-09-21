@@ -1,7 +1,7 @@
 import os
 from .util import (
     find_mountpoint_by_partuuid,
-    read_coff_section,
+    read_pecoff_section,
 )
 
 def _efivar_read(name, uuid):
@@ -58,7 +58,7 @@ def loader_get_cmdline(entry, esp=None):
     return " ".join([*initrd, *options])
 
 def sd_stub_get_cmdline(path):
-    return read_coff_section(path, ".cmdline").decode("utf-8")
+    return read_pecoff_section(path, ".cmdline").decode("utf-8")
 
 def loader_get_next_cmdline(last_efi_binary=None):
     try:
