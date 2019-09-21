@@ -2,6 +2,7 @@ import hashlib
 import os
 import signify.fingerprinter
 import subprocess
+import tempfile
 
 NUM_PCRS = 24
 PCR_SIZE = hashlib.sha1().digest_size
@@ -110,10 +111,10 @@ def find_mountpoint_by_partuuid(partuuid):
     return res.stdout.splitlines()[0].decode()
 
 def read_coff_section(path, section):
-    with open(path, "rb"):
-        res = subprocess.run(["objcopy", path, "/dev/null",
-                                         "--dump-section",
-                                         "%s=/dev/stdout" % section],
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.DEVNULL)
+    with tempfile.NamedTemporaryFile() as tmp:
+        res = subprocess.run(["objcopy", path, tmp.name,
+                                         "--only-section", "I hate objcopy",
+                                         "--dump-section", "%s=/dev/stdout" % section],
+                             stdout=subprocess.PIPE)
+        res.check_returncode()
         return res.stdout
