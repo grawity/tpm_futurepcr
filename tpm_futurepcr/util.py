@@ -57,7 +57,7 @@ def read_efi_variable(name, guid):
         return buf[4:]
 
 def init_empty_pcrs():
-    pcrs = {idx: (b"\xFF" if idx in {17, 18, 19, 20, 21, 22} else b"\x00") * PCR_SIZE
+    pcrs = {idx: (b"\xFF" if (17 <= idx <= 22) else b"\x00") * PCR_SIZE
             for idx in range(NUM_PCRS)}
     return pcrs
 
