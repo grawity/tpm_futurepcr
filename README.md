@@ -6,6 +6,10 @@ As an additional hack, this script also recognizes systemd-boot and updates PCR[
 
 This script will understand the event log in both SHA1-only (TPM 1.2) and Crypto-Agile (TPM 2.0, Linux kernel 5.3+) formats. However, the current version only works with and outputs SHA-1 PCRs. In the future, support for selecting multiple digest algorithms will be added.
 
+### Warning
+
+Neither systemd-boot nor EFISTUB currently measure the initramfs images. It is not safe to rely on PCR[4] _unless_ you are using a combined kernel+initramfs file (such as the one produced by mksignkernels), or you are using a bootloader which measures the initramfs separately.
+
 ### Installation
   
 `python setup.py install`
