@@ -55,10 +55,12 @@ def parse_efi_variable_event(buf):
 
 def show_log_entry(e):
     verbose = False
-    print("PCR %d: extend %s" % (e["pcr_idx"], to_hex(e["pcr_extend_value"])))
     event_type = e["event_type"]
     event_type_str = TpmEventType(event_type)
-    print("Event type: %08X <%s>" % (event_type, event_type_str))
+    print()
+    print("\033[1mPCR %d -- Event %08X <%s>\033[m" % (e["pcr_idx"], event_type, event_type_str))
+    if "pcr_extend_value" in e:
+        print("Extend (SHA1): %s" % to_hex(e["pcr_extend_value"]))
     event_data = e["event_data"]
     if event_type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
         if verbose:
@@ -85,7 +87,6 @@ def show_log_entry(e):
             print("Variable: %r {%s}" % (ed["unicode_name"], ed["variable_name_uuid"]))
     else:
         hexdump(event_data, 64)
-    print()
 
 # ~/src/linux/include/linux/tpm_eventlog.h
 # TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44

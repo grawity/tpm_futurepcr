@@ -37,13 +37,21 @@ def main():
 
     for event in enum_log_entries(args.log_path):
         idx = event["pcr_idx"]
-        this_extend_value = event["pcr_extend_value"]
-        next_extend_value = this_extend_value
 
         _verbose_pcr = (args.verbose and (verbose_all_pcrs or idx in wanted_pcrs))
         if _verbose_pcr:
-            #pprint(event)
             show_log_entry(event)
+
+        if "pcr_extend_value" not in event:
+            print("event does not update SHA1 PCR bank, skipping")
+            continue
+
+        if idx == 0xFFFFFFFF:
+            print("event updates Windows virtual PCR[-1], skipping")
+            continue
+
+        this_extend_value = event["pcr_extend_value"]
+        next_extend_value = this_extend_value
 
         if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
             event_data = parse_efi_bsa_event(event["event_data"])
@@ -92,7 +100,6 @@ def main():
             print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
-
 
     # HACK: systemd-boot doesn't generate a log entry when extending PCR[8], do it ourselves
     # (not sure why, as it calls HashLogExtendEvent and there should be an EV_IPL(13) event)
