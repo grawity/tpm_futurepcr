@@ -5,17 +5,6 @@ from .util import (to_hex, hexdump)
 
 SHA1_DIGEST_SIZE = 20
 
-def parse_efi_bsa_event(buf):
-    buf = BinaryReader(io.BytesIO(buf))
-    log = {}
-    log["image_location"]   = buf.read_ptr_le() # EFI_PHYSICAL_ADDRESS (pointer)
-    log["image_length"]     = buf.read_size_le() # UINTN (u64/u32 depending on arch)
-    log["image_lt_address"] = buf.read_size_le() # UINTN
-    log["device_path_len"]  = buf.read_size_le() # UINTN
-    log["device_path"]      = buf.read(log["device_path_len"])
-    log["device_path_vec"]  = parse_efi_device_path(log["device_path"])
-    return log
-
 def parse_efi_tcg2_header_event(buf):
     buf = BinaryReader(io.BytesIO(buf))
     log = {}
@@ -36,6 +25,17 @@ def parse_efi_tcg2_header_event(buf):
         log["digest_sizes_dict"][ds["algorithm_id"]] = ds["digest_size"]
     log["vendor_info_len"]      = buf.read_u8()
     log["vendor_info"]          = buf.read(log["vendor_info_len"])
+    return log
+
+def parse_efi_bsa_event(buf, uintn_size=None):
+    buf = BinaryReader(io.BytesIO(buf))
+    log = {}
+    log["image_location"]   = buf.read_ptr_le() # EFI_PHYSICAL_ADDRESS (pointer)
+    log["image_length"]     = buf.read_size_le() # UINTN (u64/u32 depending on arch)
+    log["image_lt_address"] = buf.read_size_le() # UINTN
+    log["device_path_len"]  = buf.read_size_le() # UINTN
+    log["device_path"]      = buf.read(log["device_path_len"])
+    log["device_path_vec"]  = parse_efi_device_path(log["device_path"])
     return log
 
 def show_log_entry(e):
