@@ -1,7 +1,7 @@
 from .binary_reader import BinaryReader
 from .device_path import *
 from .tpm_constants import TpmAlgorithm
-from .util import (to_hex, hexdump)
+from .util import (to_hex, hexdump, guid_to_UUID)
 
 SHA1_DIGEST_SIZE = 20
 
@@ -38,6 +38,19 @@ def parse_efi_bsa_event(buf, uintn_size=None):
     log["device_path_vec"]  = parse_efi_device_path(log["device_path"])
     return log
 
+def parse_efi_variable_event(buf):
+    # https://docs.microsoft.com/en-us/windows-hardware/test/hlk/testref/trusted-execution-environment-efi-protocol
+    buf = BinaryReader(io.BytesIO(buf))
+    log = {}
+    log["variable_name_guid"]   = buf.read(16)
+    log["variable_name_uuid"]   = guid_to_UUID(log["variable_name_guid"])
+    log["unicode_name_len"]     = buf.read_u64_le()
+    log["variable_data_len"]    = buf.read_u64_le()
+    log["unicode_name_u16"]     = buf.read(log["unicode_name_len"] * 2)
+    log["variable_data"]        = buf.read(log["variable_data_len"])
+    log["unicode_name"]         = log["unicode_name_u16"].decode("utf-16le")
+    return log
+
 def show_log_entry(e):
     print("PCR %d: extend %s" % (e["pcr_idx"], to_hex(e["pcr_extend_value"])))
     event_type = e["event_type"]
@@ -48,6 +61,13 @@ def show_log_entry(e):
         hexdump(event_data)
         ed = parse_efi_bsa_event(event_data)
         #pprint(ed)
+    elif event_type in {TpmEventType.EFI_VARIABLE_AUTHORITY,
+                        TpmEventType.EFI_VARIABLE_BOOT,
+                        TpmEventType.EFI_VARIABLE_DRIVER_CONFIG}:
+        hexdump(event_data, 64)
+        ed = parse_efi_variable_event(event_data)
+        #pprint(ed)
+        print("Variable: %r {%s}" % (ed["unicode_name"], ed["variable_name_uuid"]))
     else:
         hexdump(event_data, 32)
     print()
