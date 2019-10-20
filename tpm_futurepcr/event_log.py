@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from .binary_reader import BinaryReader
 from .device_path import *
 from .tpm_constants import TpmAlgorithm
@@ -52,24 +54,37 @@ def parse_efi_variable_event(buf):
     return log
 
 def show_log_entry(e):
+    verbose = False
     print("PCR %d: extend %s" % (e["pcr_idx"], to_hex(e["pcr_extend_value"])))
     event_type = e["event_type"]
     event_type_str = TpmEventType(event_type)
     print("Event type: %08X <%s>" % (event_type, event_type_str))
     event_data = e["event_data"]
     if event_type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
-        hexdump(event_data)
-        ed = parse_efi_bsa_event(event_data)
-        #pprint(ed)
+        if verbose:
+            hexdump(event_data)
+            ed = parse_efi_bsa_event(event_data)
+            pprint(ed)
+        else:
+            ed = parse_efi_bsa_event(event_data)
+            print("Path vector:")
+            for p in ed["device_path_vec"]:
+                type_name = getattr(p["type"], "name", str(p["type"]))
+                subtype_name = getattr(p["subtype"], "name", str(p["subtype"]))
+                file_path = p.get("file_path", p["data"])
+                print("  * %-20s %-20s %s" % (type_name, subtype_name, file_path))
     elif event_type in {TpmEventType.EFI_VARIABLE_AUTHORITY,
                         TpmEventType.EFI_VARIABLE_BOOT,
                         TpmEventType.EFI_VARIABLE_DRIVER_CONFIG}:
-        hexdump(event_data, 64)
-        ed = parse_efi_variable_event(event_data)
-        #pprint(ed)
-        print("Variable: %r {%s}" % (ed["unicode_name"], ed["variable_name_uuid"]))
+        if verbose:
+            hexdump(event_data, 64)
+            ed = parse_efi_variable_event(event_data)
+            pprint(ed)
+        else:
+            ed = parse_efi_variable_event(event_data)
+            print("Variable: %r {%s}" % (ed["unicode_name"], ed["variable_name_uuid"]))
     else:
-        hexdump(event_data, 32)
+        hexdump(event_data, 64)
     print()
 
 # ~/src/linux/include/linux/tpm_eventlog.h

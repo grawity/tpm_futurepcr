@@ -42,6 +42,7 @@ def main():
 
         _verbose_pcr = (args.verbose and (verbose_all_pcrs or idx in wanted_pcrs))
         if _verbose_pcr:
+            #pprint(event)
             show_log_entry(event)
 
         if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
@@ -53,6 +54,8 @@ def main():
                     print("entry didn't map to a Linux path")
                     continue
                 else:
+                    #pprint(event)
+                    #pprint(event_data)
                     print("exiting due to unusual boot process events", file=sys.stderr)
                     exit(1)
             file_hash = hash_pecoff(unix_path, "sha1")
