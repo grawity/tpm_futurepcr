@@ -111,7 +111,7 @@ def enum_log_entries(path=None):
                     event["pcr_count"] = rd.read_u32_le()
                     event["pcr_extend_values"] = []
                     event["pcr_extend_values_dict"] = {}
-                    for i in range(tcg_hdr["num_algorithms"]):
+                    for i in range(event["pcr_count"]):
                         # Spec says it should be safe to just iter over hdr[digest_sizes],
                         # as all entries must have the same algorithms in the same order,
                         # but it does recommend alg_id lookup as the preferred method.
