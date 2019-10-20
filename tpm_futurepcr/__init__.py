@@ -20,6 +20,8 @@ def main():
                         help="compare computed PCRs against live values")
     parser.add_argument("--verbose", action="store_true",
                         help="show verbose information about log parsing")
+    parser.add_argument("--log-path",
+                        help="read binary log from an alternative path")
     args = parser.parse_args()
 
     if args.pcr_list:
@@ -33,7 +35,7 @@ def main():
     next_pcrs = {**this_pcrs}
     last_efi_binary = None
 
-    for event in enum_log_entries():
+    for event in enum_log_entries(args.log_path):
         idx = event["pcr_idx"]
         this_extend_value = event["pcr_extend_value"]
         next_extend_value = this_extend_value

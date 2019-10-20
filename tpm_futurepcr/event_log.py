@@ -58,10 +58,10 @@ def show_log_entry(e):
 # TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
 # TPMv2: https://trustedcomputinggroup.org/wp-content/uploads/EFI-Protocol-Specification-rev13-160330final.pdf
 
-def enum_log_entries():
+def enum_log_entries(path=None):
     tpm_ver = 1 # the first entry is always in old format
     tcg_hdr = None
-    with open("/sys/kernel/security/tpm0/binary_bios_measurements", "rb") as fh:
+    with open(path or "/sys/kernel/security/tpm0/binary_bios_measurements", "rb") as fh:
         rd = BinaryReader(fh)
         while True:
             event = {}
