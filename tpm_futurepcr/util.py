@@ -23,6 +23,12 @@ def hexdump(buf, max_len=None):
     if len(buf) > max_len:
         print("(%d more bytes)" % (len(buf) - max_len))
 
+def guid_to_UUID(buf):
+    import struct
+    import uuid
+    buf = struct.pack(">LHH8B", *struct.unpack("<LHH8B", buf))
+    return uuid.UUID(bytes=buf)
+
 def hash_bytes(buf, alg="sha1"):
     h = hashlib.new(alg)
     h.update(buf)
