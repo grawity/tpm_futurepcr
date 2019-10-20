@@ -14,6 +14,8 @@ def to_hex(buf):
 def hexdump(buf, max_len=None):
     if max_len is None:
         max_len = len(buf)
+    else:
+        max_len = min(max_len, len(buf))
     for i in range(0, max_len, 16):
         row = buf[i:i+16]
         offs = "0x%08x:" % i
