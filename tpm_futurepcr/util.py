@@ -11,13 +11,17 @@ def to_hex(buf):
     import binascii
     return binascii.hexlify(buf).decode()
 
-def hexdump(buf):
-    for i in range(0, len(buf), 16):
+def hexdump(buf, max_len=None):
+    if max_len is None:
+        max_len = len(buf)
+    for i in range(0, max_len, 16):
         row = buf[i:i+16]
         offs = "0x%08x:" % i
         hexs = ["%02X" % b for b in row] + ["  "] * 16
         text = [chr(b) if 0x20 < b < 0x7f else "." for b in row] + [" "] * 16
         print(offs, " ".join(hexs[:16]), "|%s|" % "".join(text[:16]))
+    if len(buf) > max_len:
+        print("(%d more bytes)" % (len(buf) - max_len))
 
 def hash_bytes(buf, alg="sha1"):
     h = hashlib.new(alg)
