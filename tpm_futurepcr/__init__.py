@@ -65,7 +65,7 @@ def main():
                 print("this event extend value =", to_hex(this_extend_value))
                 print("guessed extend value =", to_hex(next_extend_value))
 
-        if event["event_type"] == TpmEventType.IPL:
+        if event["event_type"] == TpmEventType.IPL and (idx in wanted_pcrs):
             try:
                 cmdline = loader_get_next_cmdline(last_efi_binary)
                 if args.verbose:
