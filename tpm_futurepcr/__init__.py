@@ -34,6 +34,7 @@ def main():
     this_pcrs = init_empty_pcrs()
     next_pcrs = {**this_pcrs}
     last_efi_binary = None
+    errors = 0
 
     for event in enum_log_entries(args.log_path):
         idx = event["pcr_idx"]
@@ -55,26 +56,31 @@ def main():
 
         if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
             event_data = parse_efi_bsa_event(event["event_data"])
-            unix_path = device_path_to_unix_path(event_data["device_path_vec"])
-            if not unix_path:
+            try:
+                unix_path = device_path_to_unix_path(event_data["device_path_vec"])
+            except Exception as e:
+                print(e)
+                errors = 1
+                unix_path = None
+
+            if unix_path:
+                file_hash = hash_pecoff(unix_path, "sha1")
+                next_extend_value = file_hash
+                last_efi_binary = unix_path
+                if _verbose_pcr:
+                    print("-- extending with coff hash --")
+                    print("file path =", unix_path)
+                    print("file hash =", to_hex(file_hash))
+                    print("this event extend value =", to_hex(this_extend_value))
+                    print("guessed extend value =", to_hex(next_extend_value))
+            else:
                 # this might be a firmware item such as the boot menu
                 if args.verbose:
                     print("entry didn't map to a Linux path")
                     continue
                 else:
-                    #pprint(event)
-                    #pprint(event_data)
                     print("exiting due to unusual boot process events", file=sys.stderr)
                     exit(1)
-            file_hash = hash_pecoff(unix_path, "sha1")
-            next_extend_value = file_hash
-            last_efi_binary = unix_path
-            if _verbose_pcr:
-                print("-- extending with coff hash --")
-                print("file path =", unix_path)
-                print("file hash =", to_hex(file_hash))
-                print("this event extend value =", to_hex(this_extend_value))
-                print("guessed extend value =", to_hex(next_extend_value))
 
         if event["event_type"] == TpmEventType.IPL and (idx in wanted_pcrs):
             try:
@@ -145,6 +151,10 @@ def main():
         print(" "*7, "%-*s" % (PCR_SIZE*2, "CURRENT"), "|", "%-*s" % (PCR_SIZE*2, "PREDICTED NEXT"))
         for idx in wanted_pcrs:
             print("PCR %2d:" % idx, to_hex(this_pcrs[idx]), "|", to_hex(next_pcrs[idx]))
+
+    if errors:
+        print("fatal errors occured", file=sys.stderr)
+        exit(1)
 
     if args.output:
         with open(args.output, "wb") as fh:
