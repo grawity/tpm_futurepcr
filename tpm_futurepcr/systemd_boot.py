@@ -67,7 +67,10 @@ def loader_get_next_cmdline(last_efi_binary=None):
         # Booted using mksignkernels/systemd-stub, so the cmdline is embedded in
         # the kernel .efi binary. We don't know its path so assume it's the last
         # binary we've seen in the event log.
-        return sd_stub_get_cmdline(last_efi_binary)
+        if last_efi_binary:
+            return sd_stub_get_cmdline(last_efi_binary)
+        else:
+            raise Exception("systemd-stub is present, but no EFI binary traced")
     else:
         entry = loader_get_current_entry()
         esp = find_mountpoint_by_partuuid(loader_get_esp_partuuid())

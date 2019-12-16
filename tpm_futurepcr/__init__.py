@@ -112,11 +112,12 @@ def main():
     # 2019-06-07: Probably fixed in systemd commit v242-780-gf8e54bf319 and/or kernel 5.2
     if 8 in wanted_pcrs and this_pcrs[8] == (b"\x00" * PCR_SIZE):
         if args.verbose:
+            print("PCR 8: is empty; this must be a pre-5.2 kernel")
             print("PCR 8: synthesizing kernel cmdline event to match systemd-boot")
         idx = 8
         this_pcrs[idx] = read_current_pcr(idx)
         try:
-            cmdline = loader_get_next_cmdline()
+            cmdline = loader_get_next_cmdline(last_efi_binary)
             if args.verbose:
                 print("guessed next cmdline:", cmdline)
             cmdline = loader_encode_pcr8(cmdline)
