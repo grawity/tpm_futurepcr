@@ -2,7 +2,6 @@ import hashlib
 import os
 import signify.fingerprinter
 import subprocess
-import tempfile
 
 NUM_PCRS = 24
 PCR_SIZE = hashlib.sha1().digest_size
@@ -54,13 +53,53 @@ def hash_pecoff(path, alg="sha1"):
     return None
 
 def read_pecoff_section(path, section):
-    with tempfile.NamedTemporaryFile() as tmp:
-        res = subprocess.run(["objcopy", path, tmp.name,
-                                         "--only-section", "I hate objcopy",
-                                         "--dump-section", "%s=/dev/stdout" % section],
-                             stdout=subprocess.PIPE)
-        res.check_returncode()
-        return res.stdout
+    from .binary_reader import BinaryReader
+    want_section = section.encode()
+    found_size = None
+    found_offset = None
+    with open(path, "rb") as fh:
+        br = BinaryReader(fh)
+        # MS-DOS stub
+        dos_stub = br.read(0x3c)
+        if dos_stub[0:2] != b"MZ":
+            raise ValueError("File does not start with MS-DOS MZ magic")
+        pe_offset = br.read_u16_le()
+        br.seek(pe_offset)
+        pe_sig = br.read(4)
+        if pe_sig != b"PE\0\0":
+            raise ValueError("File does not contain PE signature")
+        # COFF header
+        target_machine = br.read_u16_le()
+        num_sections = br.read_u16_le()
+        time_date = br.read_u32_le()
+        symtab_offset = br.read_u32_le()
+        num_symbols = br.read_u32_le()
+        opthdr_size = br.read_u16_le()
+        characteristics = br.read_u16_le()
+        # Optional PE32 Header
+        if opthdr_size:
+            _ = br.read(opthdr_size)
+        # Section table
+        for i in range(num_sections):
+            section_name = br.read(8).rstrip(b"\0")
+            virtual_size = br.read_u32_le()
+            virtual_addr = br.read_u32_le()
+            section_size = br.read_u32_le()
+            section_offset = br.read_u32_le()
+            relocs_offset = br.read_u32_le()
+            linenums_offset = br.read_u32_le()
+            num_relocs = br.read_u16_le()
+            num_linenums = br.read_u16_le()
+            characteristics = br.read_u32_le()
+            if section_name == want_section:
+                found_size = min(section_size, virtual_size)
+                found_offset = section_offset
+        if found_size is None:
+            raise ValueError("File did not contain a section named %r" % (section_name))
+        # The section
+        br.seek(found_offset)
+        data = br.read(found_size)
+        return data
 
 def read_efi_variable(name, guid):
     path = "/sys/firmware/efi/efivars/%s-%s" % (name, guid)
