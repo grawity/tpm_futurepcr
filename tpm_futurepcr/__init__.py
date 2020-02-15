@@ -107,32 +107,6 @@ def main():
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
 
-    # HACK: systemd-boot doesn't generate a log entry when extending PCR[8], do it ourselves
-    # (not sure why, as it calls HashLogExtendEvent and there should be an EV_IPL(13) event)
-    # 2019-06-07: Probably fixed in systemd commit v242-780-gf8e54bf319 and/or kernel 5.2
-    if 8 in wanted_pcrs and this_pcrs[8] == (b"\x00" * PCR_SIZE):
-        if args.verbose:
-            print("PCR 8: is empty; this must be a pre-5.2 kernel")
-            print("PCR 8: synthesizing kernel cmdline event to match systemd-boot")
-        idx = 8
-        this_pcrs[idx] = read_current_pcr(idx)
-        try:
-            cmdline = loader_get_next_cmdline(last_efi_binary)
-            if args.verbose:
-                print("guessed next cmdline:", cmdline)
-            cmdline = loader_encode_pcr8(cmdline)
-            next_pcrs[idx] = extend_pcr_with_data(next_pcrs[idx], cmdline)
-        except FileNotFoundError:
-            # Either some of the EFI variables, or the ESP, or the .conf, are missing.
-            # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
-            if args.verbose:
-                print("systemd-boot not detected")
-            next_pcrs[idx] = this_pcrs[idx]
-        if args.verbose:
-            print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
-            print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
-            print()
-
     if args.compare:
         print("== Real vs computed PCR values ==")
         real_pcrs = read_current_pcrs(wanted_pcrs)
