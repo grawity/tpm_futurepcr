@@ -26,7 +26,15 @@ def main():
 
     if args.pcr_list:
         verbose_all_pcrs = False
-        wanted_pcrs = [int(idx) for idx in args.pcr_list.split(",")]
+        pcr_list = args.pcr_list
+        if "+" in pcr_list:
+            raise ValueError("PCR bank specifier may only contain one bank")
+        if ":" in pcr_list:
+            bank_spec = pcr_list.split(":")
+            if bank_spec[0] != "sha1":
+                raise ValueError("Only sha1 PCR banks are supported")
+            pcr_list = bank_spec[1]
+        wanted_pcrs = [int(idx) for idx in pcr_list.split(",")]
     else:
         verbose_all_pcrs = True
         wanted_pcrs = [*range(NUM_PCRS)]
