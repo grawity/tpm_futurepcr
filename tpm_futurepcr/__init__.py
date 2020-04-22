@@ -117,7 +117,7 @@ def main():
 
     if args.compare:
         print("== Real vs computed PCR values ==")
-        real_pcrs = read_current_pcrs(wanted_pcrs)
+        real_pcrs = read_current_pcrs()
         errors = 0
         print(" "*7, "%-*s" % (PCR_SIZE*2, "REAL"), "|", "%-*s" % (PCR_SIZE*2, "COMPUTED"))
         for idx in wanted_pcrs:
