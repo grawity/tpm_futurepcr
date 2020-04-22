@@ -133,9 +133,6 @@ def in_path(exe):
             return True
     return False
 
-def read_current_pcr(idx):
-    return read_current_pcrs()[idx]
-
 def read_current_pcrs():
     if is_tpm2():
         if in_path("tpm2_pcrread"): # tpm2-utils 4.0 or later
