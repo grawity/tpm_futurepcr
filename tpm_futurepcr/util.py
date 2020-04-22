@@ -139,6 +139,9 @@ def read_current_pcrs():
             cmd = ["tpm2_pcrread", "sha1", "-Q", "-o", "/dev/stdout"]
         elif in_path("tpm2_pcrlist"): # tpm2-utils 3.x
             cmd = ["tpm2_pcrlist", "-L", "sha1", "-Q", "-o", "/dev/stdout"]
+        else:
+            # TODO: try using IBM TSS tools
+            raise Exception("tpm2_pcrread or tpm2_pcrlist not found")
         res = subprocess.run(cmd, stdout=subprocess.PIPE)
         res.check_returncode()
         buf = res.stdout
