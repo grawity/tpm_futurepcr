@@ -138,13 +138,11 @@ def read_current_pcr(idx):
 
 def read_current_pcrs():
     if is_tpm2():
-        if in_path("tpm2_pcrread"):
-            # utils 4.0
-            res = subprocess.run(["tpm2_pcrread", "sha1", "-Q", "-o", "/dev/stdout"],
-                                 stdout=subprocess.PIPE)
-        elif in_path("tpm2_pcrlist"):
-            res = subprocess.run(["tpm2_pcrlist", "-L", "sha1", "-Q", "-o", "/dev/stdout"],
-                                 stdout=subprocess.PIPE)
+        if in_path("tpm2_pcrread"): # tpm2-utils 4.0 or later
+            cmd = ["tpm2_pcrread", "sha1", "-Q", "-o", "/dev/stdout"]
+        elif in_path("tpm2_pcrlist"): # tpm2-utils 3.x
+            cmd = ["tpm2_pcrlist", "-L", "sha1", "-Q", "-o", "/dev/stdout"]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE)
         res.check_returncode()
         buf = res.stdout
         assert(len(buf) % PCR_SIZE == 0)
