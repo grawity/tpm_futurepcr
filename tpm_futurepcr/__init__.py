@@ -96,8 +96,8 @@ def main():
                 if args.verbose:
                     old_cmdline = event["event_data"][:-1].decode("utf-16le")
                     print("-- extending with systemd-boot cmdline --")
-                    print("this cmdline:", old_cmdline)
-                    print("next cmdline:", cmdline)
+                    print("this cmdline:", repr(old_cmdline))
+                    print("next cmdline:", repr(cmdline))
                 cmdline = loader_encode_pcr8(cmdline)
                 next_extend_value = hash_bytes(cmdline)
             except FileNotFoundError:
