@@ -55,7 +55,12 @@ def loader_get_cmdline(entry, esp=None):
     return " ".join([*initrd, *options])
 
 def sd_stub_get_cmdline(path):
-    return read_pecoff_section(path, ".cmdline").decode("utf-8")
+    # Match systemd.git:src/boot/efi/boot.c:config_entry_add_linux()
+    cmdline = read_pecoff_section(path, ".cmdline").decode("utf-8")
+    # Chomp a single trailing newline
+    if cmdline[-1] == "\n":
+        cmdline = cmdline[:-1]
+    return cmdline
 
 def loader_get_next_cmdline(last_efi_binary=None):
     try:
