@@ -16,6 +16,8 @@ def main():
                         help="limit output to specified PCR indexes")
     parser.add_argument("-o", "--output",
                         help="write binary PCR values to specified file")
+    parser.add_argument("--allow-unexpected-bsa", action="store_true",
+                        help="accept BOOT_SERVICES_APPLICATION events with weird paths")
     parser.add_argument("--compare", action="store_true",
                         help="compare computed PCRs against live values")
     parser.add_argument("--verbose", action="store_true",
@@ -85,7 +87,7 @@ def main():
                 # this might be a firmware item such as the boot menu
                 if args.verbose:
                     print("entry didn't map to a Linux path")
-                else:
+                elif not args.allow_unexpected_bsa:
                     print("exiting due to unusual boot process events", file=sys.stderr)
                     exit(1)
 
