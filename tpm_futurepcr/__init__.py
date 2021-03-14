@@ -85,7 +85,6 @@ def main():
                 # this might be a firmware item such as the boot menu
                 if args.verbose:
                     print("entry didn't map to a Linux path")
-                    continue
                 else:
                     print("exiting due to unusual boot process events", file=sys.stderr)
                     exit(1)
