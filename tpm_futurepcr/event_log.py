@@ -107,6 +107,7 @@ def enum_log_entries(path=None):
                 if tpm_ver == 1:
                     # section 5.1, SHA1 Event Log Entry Format
                     event["pcr_extend_value"] = rd.read(SHA1_DIGEST_SIZE)
+                    event["pcr_extend_values_dict"] = {TpmAlgorithm.SHA1: event["pcr_extend_value"]}
                 elif tpm_ver == 2:
                     # section 5.2, Crypto Agile Log Entry Format
                     event["pcr_count"] = rd.read_u32_le()

@@ -67,16 +67,12 @@ def main():
             print("event updates Windows virtual PCR[-1], skipping")
             continue
 
-        if hash_alg == "sha1":
-            this_extend_value = event.get("pcr_extend_value")
-        else:
-            this_extend_value = event.get("pcr_extend_values_dict", {}).get(tpm_hash_alg)
+        this_extend_value = event["pcr_extend_values_dict"].get(tpm_hash_alg)
+        next_extend_value = this_extend_value
 
         if this_extend_value is None:
             print("event does not update the specified PCR bank, skipping")
             continue
-
-        next_extend_value = this_extend_value
 
         if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
             event_data = parse_efi_bsa_event(event["event_data"])
