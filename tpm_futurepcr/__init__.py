@@ -15,19 +15,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-L", "--pcr-list",
                         help="limit output to specified PCR indexes")
+    parser.add_argument("-H", "--hash-alg",
+                        help="specify the hash algorithm to use")
     parser.add_argument("-o", "--output",
                         help="write binary PCR values to specified file")
     parser.add_argument("--allow-unexpected-bsa", action="store_true",
                         help="accept BOOT_SERVICES_APPLICATION events with weird paths")
     parser.add_argument("--compare", action="store_true",
                         help="compare computed PCRs against live values")
-    parser.add_argument("--verbose", action="store_true",
+    parser.add_argument("-v", "--verbose", action="store_true",
                         help="show verbose information about log parsing")
     parser.add_argument("--log-path",
                         help="read binary log from an alternative path")
     args = parser.parse_args()
 
-    hash_alg = "sha1"
+    hash_alg = args.hash_alg or "sha1"
     if args.pcr_list:
         verbose_all_pcrs = False
         pcr_list = args.pcr_list
@@ -35,13 +37,15 @@ def main():
             raise ValueError("PCR bank specifier may only contain one bank")
         if ":" in pcr_list:
             bank_spec = pcr_list.split(":")
-            if bank_spec[0] != "sha1":
-                raise ValueError("Only sha1 PCR banks are supported")
+            hash_alg = bank_spec[0]
             pcr_list = bank_spec[1]
         wanted_pcrs = [int(idx) for idx in pcr_list.split(",")]
     else:
         verbose_all_pcrs = True
         wanted_pcrs = [*range(NUM_PCRS)]
+
+    if hash_alg not in {"sha1", "sha256"}:
+        raise ValueError("Only sha1 and sha256 banks are supported.")
 
     this_pcrs = PcrBank(hash_alg)
     next_pcrs = PcrBank(hash_alg)
