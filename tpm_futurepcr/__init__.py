@@ -3,6 +3,7 @@ import argparse
 import sys
 
 from .event_log import *
+from .pcr_bank import *
 from .systemd_boot import (
     loader_encode_pcr8,
     loader_get_next_cmdline,
