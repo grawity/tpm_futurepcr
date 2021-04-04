@@ -113,19 +113,7 @@ def init_empty_pcrs():
     return pcrs
 
 def is_tpm2():
-    if not os.path.exists("/sys/class/tpm/tpm0/caps"):
-        # XXX: the sysfs interface is suddenly gone for TPM 2.0, and mjg says it wasn't
-        #      actually meant to be there, and I don't know how to check the version in
-        #      any other way so just assume it's 2.0 in that case.
-        return True
-    with open("/sys/class/tpm/tpm0/caps", "r") as fh:
-        for line in fh:
-            if line.startswith("TCG version: 2."):
-                # XXX: untested
-                return True
-            if line.startswith("TCG version: 1.2"):
-                return False
-    return True
+    return os.path.exists("/dev/tpmrm0")
 
 def in_path(exe):
     for p in os.environ["PATH"].split(":"):
