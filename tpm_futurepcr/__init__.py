@@ -27,6 +27,7 @@ def main():
                         help="read binary log from an alternative path")
     args = parser.parse_args()
 
+    hash_alg = "sha1"
     if args.pcr_list:
         verbose_all_pcrs = False
         pcr_list = args.pcr_list
@@ -42,8 +43,8 @@ def main():
         verbose_all_pcrs = True
         wanted_pcrs = [*range(NUM_PCRS)]
 
-    this_pcrs = PcrBank()
-    next_pcrs = PcrBank()
+    this_pcrs = PcrBank(hash_alg)
+    next_pcrs = PcrBank(hash_alg)
     last_efi_binary = None
     errors = 0
 
@@ -75,7 +76,7 @@ def main():
                 unix_path = None
 
             if unix_path:
-                file_hash = hash_pecoff(unix_path, "sha1")
+                file_hash = hash_pecoff(unix_path, hash_alg)
                 next_extend_value = file_hash
                 last_efi_binary = unix_path
                 if _verbose_pcr:
@@ -101,7 +102,7 @@ def main():
                     print("this cmdline:", repr(old_cmdline))
                     print("next cmdline:", repr(cmdline))
                 cmdline = loader_encode_pcr8(cmdline)
-                next_extend_value = hash_bytes(cmdline)
+                next_extend_value = hash_bytes(cmdline, hash_alg)
             except FileNotFoundError:
                 # Either some of the EFI variables, or the ESP, or the .conf, are missing.
                 # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
