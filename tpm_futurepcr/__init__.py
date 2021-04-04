@@ -44,7 +44,11 @@ def main():
         verbose_all_pcrs = True
         wanted_pcrs = [*range(NUM_PCRS)]
 
-    if hash_alg not in {"sha1", "sha256"}:
+    if hash_alg == "sha1":
+        tpm_hash_alg = TpmAlgorithm.SHA1
+    elif hash_alg == "sha256":
+        tpm_hash_alg = TpmAlgorithm.SHA256
+    else:
         raise ValueError("Only sha1 and sha256 banks are supported.")
 
     this_pcrs = PcrBank(hash_alg)
@@ -59,15 +63,19 @@ def main():
         if _verbose_pcr:
             show_log_entry(event)
 
-        if "pcr_extend_value" not in event:
-            print("event does not update SHA1 PCR bank, skipping")
-            continue
-
         if idx == 0xFFFFFFFF:
             print("event updates Windows virtual PCR[-1], skipping")
             continue
 
-        this_extend_value = event["pcr_extend_value"]
+        if hash_alg == "sha1":
+            this_extend_value = event.get("pcr_extend_value")
+        else:
+            this_extend_value = event.get("pcr_extend_values_dict", {}).get(tpm_hash_alg)
+
+        if this_extend_value is None:
+            print("event does not update the specified PCR bank, skipping")
+            continue
+
         next_extend_value = this_extend_value
 
         if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
