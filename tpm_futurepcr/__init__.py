@@ -16,7 +16,7 @@ def main():
     parser.add_argument("-L", "--pcr-list",
                         help="limit output to specified PCR indexes")
     parser.add_argument("-H", "--hash-alg",
-                        help="specify the hash algorithm to use")
+                        help="specify the hash algorithm (sha1 or sha256)")
     parser.add_argument("-o", "--output",
                         help="write binary PCR values to specified file")
     parser.add_argument("--allow-unexpected-bsa", action="store_true",
@@ -39,6 +39,9 @@ def main():
             bank_spec = pcr_list.split(":")
             hash_alg = bank_spec[0]
             pcr_list = bank_spec[1]
+        else:
+            print("WARNING: PCR bank does not specify digest algorithm. This will be an error in the future!",
+                  file=sys.stderr)
         wanted_pcrs = [int(idx) for idx in pcr_list.split(",")]
     else:
         verbose_all_pcrs = True
