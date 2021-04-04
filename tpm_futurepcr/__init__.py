@@ -67,14 +67,16 @@ def main():
             show_log_entry(event)
 
         if idx == 0xFFFFFFFF:
-            print("event updates Windows virtual PCR[-1], skipping")
+            if _verbose_pcr:
+                print("event updates Windows virtual PCR[-1], skipping")
             continue
 
         this_extend_value = event["pcr_extend_values_dict"].get(tpm_hash_alg)
         next_extend_value = this_extend_value
 
         if this_extend_value is None:
-            print("event does not update the specified PCR bank, skipping")
+            if _verbose_pcr:
+                print("event does not update the specified PCR bank, skipping")
             continue
 
         if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
