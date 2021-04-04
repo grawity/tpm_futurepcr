@@ -9,9 +9,9 @@ def read_current_pcrs(alg="sha1"):
     pcr_size = hashlib.new(alg).digest_size
     if is_tpm2():
         if in_path("tpm2_pcrread"): # tpm2-utils 4.0 or later
-            cmd = ["tpm2_pcrread", "sha1", "-Q", "-o", "/dev/stdout"]
+            cmd = ["tpm2_pcrread", alg, "-Q", "-o", "/dev/stdout"]
         elif in_path("tpm2_pcrlist"): # tpm2-utils 3.x
-            cmd = ["tpm2_pcrlist", "-L", "sha1", "-Q", "-o", "/dev/stdout"]
+            cmd = ["tpm2_pcrlist", "-L", alg, "-Q", "-o", "/dev/stdout"]
         else:
             # TODO: try using IBM TSS tools
             raise Exception("tpm2_pcrread or tpm2_pcrlist not found")
@@ -22,7 +22,7 @@ def read_current_pcrs(alg="sha1"):
         return {idx: buf[idx*pcr_size:(idx+1)*pcr_size] for idx in range(len(buf) // pcr_size)}
     else:
         if alg != "sha1":
-            raise Exception("TPM1 only supports SHA1")
+            raise Exception("TPM v1 only supports the SHA1 PCR bank")
         pcrs = {}
         with open("/sys/class/tpm/tpm0/pcrs", "r") as fh:
             for line in fh:
