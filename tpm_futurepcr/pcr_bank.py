@@ -4,13 +4,6 @@ import subprocess
 from .util import is_tpm2, in_path
 
 NUM_PCRS = 24
-PCR_SIZE = hashlib.sha1().digest_size
-
-def init_empty_pcrs(alg="sha1"):
-    pcr_size = hashlib.new(alg).digest_size
-    pcrs = {idx: (b"\xFF" if (17 <= idx <= 22) else b"\x00") * pcr_size
-            for idx in range(NUM_PCRS)}
-    return pcrs
 
 def read_current_pcrs(alg="sha1"):
     pcr_size = hashlib.new(alg).digest_size
@@ -47,3 +40,23 @@ def extend_pcr_with_hash(pcr_value, extend_value, alg="sha1"):
 def extend_pcr_with_data(pcr_value, extend_data, alg="sha1"):
     extend_value = hashlib.new(alg, extend_data).digest()
     return extend_pcr_with_hash(pcr_value, extend_value)
+
+class PcrBank():
+    NUM_PCRS = 24
+
+    def __init__(self, alg="sha1"):
+        self.hash_alg = alg
+        self.pcr_size = hashlib.new(alg).digest_size
+        self.pcrs = {idx: (b"\xFF" if (17 <= idx <= 22) else b"\x00") * self.pcr_size
+                     for idx in range(self.NUM_PCRS)}
+
+    def extend_with_hash(self, idx, extend_value):
+        self.pcrs[idx] = extend_pcr_with_hash(self.pcrs[idx], extend_value, self.hash_alg)
+        return self.pcrs[idx]
+
+    def extend_with_data(self, idx, extend_data):
+        self.pcrs[idx] = extend_pcr_with_data(self.pcrs[idx], extend_data, self.hash_alg)
+        return self.pcrs[idx]
+
+    def __getitem__(self, idx):
+        return self.pcrs[idx]

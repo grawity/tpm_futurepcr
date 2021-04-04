@@ -42,8 +42,8 @@ def main():
         verbose_all_pcrs = True
         wanted_pcrs = [*range(NUM_PCRS)]
 
-    this_pcrs = init_empty_pcrs()
-    next_pcrs = {**this_pcrs}
+    this_pcrs = PcrBank()
+    next_pcrs = PcrBank()
     last_efi_binary = None
     errors = 0
 
@@ -109,8 +109,8 @@ def main():
                     print("-- not touching non-systemd IPL event --")
 
         if event["event_type"] != TpmEventType.NO_ACTION:
-            this_pcrs[idx] = extend_pcr_with_hash(this_pcrs[idx], this_extend_value)
-            next_pcrs[idx] = extend_pcr_with_hash(next_pcrs[idx], next_extend_value)
+            this_pcrs.extend_with_hash(idx, this_extend_value)
+            next_pcrs.extend_with_hash(idx, next_extend_value)
 
         if _verbose_pcr:
             print("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
@@ -121,7 +121,7 @@ def main():
         print("== Real vs computed PCR values ==")
         real_pcrs = read_current_pcrs()
         errors = 0
-        print(" "*7, "%-*s" % (PCR_SIZE*2, "REAL"), "|", "%-*s" % (PCR_SIZE*2, "COMPUTED"))
+        print(" "*7, "%-*s" % (this_pcrs.pcr_size*2, "REAL"), "|", "%-*s" % (next_pcrs.pcr_size*2, "COMPUTED"))
         for idx in wanted_pcrs:
             if real_pcrs[idx] == this_pcrs[idx]:
                 status = "+"
@@ -133,7 +133,7 @@ def main():
 
     if args.verbose or (not args.output):
         print("== Final computed & predicted PCR values ==")
-        print(" "*7, "%-*s" % (PCR_SIZE*2, "CURRENT"), "|", "%-*s" % (PCR_SIZE*2, "PREDICTED NEXT"))
+        print(" "*7, "%-*s" % (this_pcrs.pcr_size*2, "CURRENT"), "|", "%-*s" % (next_pcrs.pcr_size*2, "PREDICTED NEXT"))
         for idx in wanted_pcrs:
             print("PCR %2d:" % idx, to_hex(this_pcrs[idx]), "|", to_hex(next_pcrs[idx]))
 
