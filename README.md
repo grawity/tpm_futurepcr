@@ -4,7 +4,7 @@ This script only recognizes measurements done by native UEFI LoadImage() – i.e
 
 As an additional hack, this script also recognizes systemd-boot and updates PCR[8] according to the future kernel command line.
 
-This script will understand the event log in both SHA1-only (TPM 1.2) and Crypto-Agile (TPM 2.0, Linux kernel 5.3+) formats. However, the current version only works with and outputs SHA-1 PCRs. In the future, support for selecting multiple digest algorithms will be added.
+This script will understand the event log in both SHA1-only (TPM 1.2) and Crypto-Agile (TPM 2.0, Linux kernel 5.3+) formats.
 
 ### Warning
 
@@ -23,14 +23,14 @@ Neither systemd-boot nor EFISTUB currently measure the initramfs images. It is n
 
 Normally sealing data against PCRs starts by creating a "policy" which specifies the PCR values. In the Intel TPM 2.0 stack, this is done with *tpm2_createpolicy*:
 
-    tpm2_createpolicy -P -L sha1:0,2,4,7 -f policy.bin
+    tpm2_createpolicy -P -L sha256:0,2,4,7 -f policy.bin
 
 This automatically uses current PCR values, and can be written to do so explicitly:
 
-    tpm2_pcrlist -L sha1:0,2,4,7 -Q -o pcrvalues.bin
-    tpm2_createpolicy -P -L sha1:0,2,4,7 -F pcrvalues.bin -f policy.bin
+    tpm2_pcrlist -L sha256:0,2,4,7 -Q -o pcrvalues.bin
+    tpm2_createpolicy -P -L sha256:0,2,4,7 -F pcrvalues.bin -f policy.bin
 
 To do the same with *future* PCR values, use tpm\_futurepcr:
 
     tpm_futurepcr -L 0,2,4,7 -o pcrvalues.bin
-    tpm2_createpolicy -P -L sha1:0,2,4,7 -F pcrvalues.bin -f policy.bin
+    tpm2_createpolicy -P -L sha256:0,2,4,7 -F pcrvalues.bin -f policy.bin
