@@ -107,12 +107,13 @@ def main():
                     print("this event extend value =", to_hex(this_extend_value))
                     print("guessed extend value =", to_hex(next_extend_value))
             else:
-                # this might be a firmware item such as the boot menu
-                if args.verbose:
-                    print("entry didn't map to a Linux path")
-                elif not args.allow_unexpected_bsa:
-                    print("exiting due to unusual boot process events", file=sys.stderr)
-                    exit(1)
+                # This might be a firmware item such as the boot menu.
+                if not args.allow_unexpected_bsa:
+                    exit("error: Unexpected boot events found. Binding to these PCR values "
+                         "is not advised, as it might be difficult to reproduce this state "
+                         "later. Exiting.")
+                print("warning: couldn't map EfiBootServicesApplication event to a Linux path",
+                      file=sys.stderr)
 
         if event["event_type"] == TpmEventType.IPL and (idx in wanted_pcrs):
             try:
