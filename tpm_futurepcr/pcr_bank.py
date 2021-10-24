@@ -49,13 +49,16 @@ class PcrBank():
         self.pcr_size = hashlib.new(alg).digest_size
         self.pcrs = {idx: (b"\xFF" if (17 <= idx <= 22) else b"\x00") * self.pcr_size
                      for idx in range(self.NUM_PCRS)}
+        self.count = {idx: 0 for idx in range(self.NUM_PCRS)}
 
     def extend_with_hash(self, idx, extend_value):
         self.pcrs[idx] = extend_pcr_with_hash(self.pcrs[idx], extend_value, self.hash_alg)
+        self.count[idx] += 1
         return self.pcrs[idx]
 
     def extend_with_data(self, idx, extend_data):
         self.pcrs[idx] = extend_pcr_with_data(self.pcrs[idx], extend_data, self.hash_alg)
+        self.count[idx] += 1
         return self.pcrs[idx]
 
     def __getitem__(self, idx):

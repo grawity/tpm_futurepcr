@@ -158,6 +158,14 @@ def main():
         print(" "*7, "%-*s" % (this_pcrs.pcr_size*2, "CURRENT"), "|", "%-*s" % (next_pcrs.pcr_size*2, "PREDICTED NEXT"))
         for idx in wanted_pcrs:
             print("PCR %2d:" % idx, to_hex(this_pcrs[idx]), "|", to_hex(next_pcrs[idx]))
+            if idx <= 7 and this_pcrs.count[idx] == 0:
+                # The first 8 PCRs always have an EV_SEPARATOR logged to them at the very least,
+                # and the first 3 or so will almost always have other boot events. If we never saw
+                # anything then the whole bank might be unused (and an all-zeros PCR value is
+                # obviously unsafe to bind against).
+                print("WARNING: No events have been logged to PCR %d in %r bank." % (idx, hash_alg),
+                      file=sys.stderr)
+                errors += 1
 
     if errors:
         print("fatal errors occured", file=sys.stderr)
