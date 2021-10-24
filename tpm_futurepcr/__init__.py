@@ -29,7 +29,7 @@ def main():
                         help="read binary log from an alternative path")
     args = parser.parse_args()
 
-    hash_alg = args.hash_alg or "sha1"
+    hash_alg = None
     if args.pcr_list:
         verbose_all_pcrs = False
         pcr_list = args.pcr_list
@@ -40,19 +40,27 @@ def main():
             hash_alg = bank_spec[0]
             pcr_list = bank_spec[1]
         else:
-            print("WARNING: PCR bank does not specify digest algorithm. This will be an error in the future!",
+            print("WARNING: PCR list does not specify hash algorithm. This will be an error in the future!",
                   file=sys.stderr)
         wanted_pcrs = [int(idx) for idx in pcr_list.split(",")]
     else:
         verbose_all_pcrs = True
         wanted_pcrs = [*range(NUM_PCRS)]
 
-    if hash_alg == "sha1":
+    if args.hash_alg:
+        if not hash_alg:
+            hash_alg = args.hash_alg
+        elif hash_alg != args.hash_alg:
+            raise ValueError("Conflicting PCR hash algorithm specifications given.")
+
+    if not hash_alg:
+        raise ValueError("PCR hash algorithm must be explicitly specified and no longer defaults to 'sha1'.")
+    elif hash_alg == "sha1":
         tpm_hash_alg = TpmAlgorithm.SHA1
     elif hash_alg == "sha256":
         tpm_hash_alg = TpmAlgorithm.SHA256
     else:
-        raise ValueError("Only sha1 and sha256 banks are supported.")
+        raise ValueError("Only 'sha1' and 'sha256' PCR banks are supported.")
 
     this_pcrs = PcrBank(hash_alg)
     next_pcrs = PcrBank(hash_alg)
