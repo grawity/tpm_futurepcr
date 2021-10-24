@@ -105,12 +105,10 @@ def enum_log_entries(path=None):
                     pcr_val = {}
                     pcr_val["alg_id"] = TpmAlgorithm.SHA1
                     pcr_val["digest"] = rd.read(20)
-                    event["pcr_extend_values"] = [pcr_val]
                     event["pcr_extend_values_dict"] = {TpmAlgorithm.SHA1: pcr_val["digest"]}
                 elif tpm_ver == 2:
                     # section 5.2, Crypto Agile Log Entry Format
                     event["pcr_count"] = rd.read_u32_le()
-                    event["pcr_extend_values"] = []
                     event["pcr_extend_values_dict"] = {}
                     for i in range(event["pcr_count"]):
                         # Spec says it should be safe to just iter over hdr[digest_sizes],
@@ -119,7 +117,6 @@ def enum_log_entries(path=None):
                         pcr_val = {}
                         pcr_val["alg_id"] = TpmAlgorithm(rd.read_u16_le())
                         pcr_val["digest"] = rd.read(tcg_hdr["digest_sizes_dict"][pcr_val["alg_id"]])
-                        event["pcr_extend_values"].append(pcr_val)
                         event["pcr_extend_values_dict"][pcr_val["alg_id"]] = pcr_val["digest"]
                 # same across both formats
                 event["event_size"] = rd.read_u32_le()
