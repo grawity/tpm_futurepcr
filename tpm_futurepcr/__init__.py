@@ -140,6 +140,10 @@ def main():
             print("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
             print()
 
+    if errors:
+        print("fatal errors occured", file=sys.stderr)
+        exit(1)
+
     if args.compare:
         print("== Real vs computed PCR values ==")
         real_pcrs = read_current_pcrs(hash_alg)
@@ -167,10 +171,6 @@ def main():
         print(" "*7, "%-*s" % (this_pcrs.pcr_size*2, "CURRENT"), "|", "%-*s" % (next_pcrs.pcr_size*2, "PREDICTED NEXT"))
         for idx in wanted_pcrs:
             print("PCR %2d:" % idx, to_hex(this_pcrs[idx]), "|", to_hex(next_pcrs[idx]))
-
-    if errors:
-        print("fatal errors occured", file=sys.stderr)
-        exit(1)
 
     if args.output:
         with open(args.output, "wb") as fh:
