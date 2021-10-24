@@ -100,24 +100,20 @@ def enum_log_entries(path=None):
                 event["pcr_idx"] = rd.read_u32_le()
                 event["event_type"] = rd.read_u32_le()
                 event["event_type"] = TpmEventType(event["event_type"])
+                event["pcr_extend_values"] = {}
                 if tpm_ver == 1:
                     # section 5.1, SHA1 Event Log Entry Format
-                    pcr_val = {}
-                    pcr_val["alg_id"] = TpmAlgorithm.SHA1
-                    pcr_val["digest"] = rd.read(20)
-                    event["pcr_extend_values_dict"] = {TpmAlgorithm.SHA1: pcr_val["digest"]}
+                    event["pcr_extend_values"][TpmAlgorithm.SHA1] = rd.read(20)
                 elif tpm_ver == 2:
                     # section 5.2, Crypto Agile Log Entry Format
-                    event["pcr_count"] = rd.read_u32_le()
-                    event["pcr_extend_values_dict"] = {}
-                    for i in range(event["pcr_count"]):
+                    pcr_count = rd.read_u32_le()
+                    for i in range(pcr_count):
                         # Spec says it should be safe to just iter over hdr[digest_sizes],
                         # as all entries must have the same algorithms in the same order,
                         # but it does recommend alg_id lookup as the preferred method.
-                        pcr_val = {}
-                        pcr_val["alg_id"] = TpmAlgorithm(rd.read_u16_le())
-                        pcr_val["digest"] = rd.read(tcg_hdr["digest_sizes_dict"][pcr_val["alg_id"]])
-                        event["pcr_extend_values_dict"][pcr_val["alg_id"]] = pcr_val["digest"]
+                        alg_id = TpmAlgorithm(rd.read_u16_le())
+                        digest = rd.read(tcg_hdr["digest_sizes_dict"][alg_id])
+                        event["pcr_extend_values"][alg_id] = digest
                 # same across both formats
                 event["event_size"] = rd.read_u32_le()
                 event["event_data"] = rd.read(event["event_size"])

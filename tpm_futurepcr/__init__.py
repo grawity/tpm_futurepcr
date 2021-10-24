@@ -79,7 +79,7 @@ def main():
                 print("event updates Windows virtual PCR[-1], skipping")
             continue
 
-        this_extend_value = event["pcr_extend_values_dict"].get(tpm_hash_alg)
+        this_extend_value = event["pcr_extend_values"].get(tpm_hash_alg)
         next_extend_value = this_extend_value
 
         if this_extend_value is None:
