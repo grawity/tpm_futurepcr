@@ -34,7 +34,7 @@ def main():
         verbose_all_pcrs = False
         pcr_list = args.pcr_list
         if "+" in pcr_list:
-            raise ValueError("PCR bank specifier may only contain one bank")
+            exit("error: PCR specifier may only contain one bank.")
         if ":" in pcr_list:
             bank_spec = pcr_list.split(":")
             hash_alg = bank_spec[0]
@@ -51,16 +51,16 @@ def main():
         if not hash_alg:
             hash_alg = args.hash_alg
         elif hash_alg != args.hash_alg:
-            raise ValueError("Conflicting PCR hash algorithm specifications given.")
+            exit("error: Conflicting PCR hash algorithm specifications given.")
 
     if not hash_alg:
-        raise ValueError("PCR hash algorithm must be explicitly specified and no longer defaults to 'sha1'.")
+        exit("error: PCR hash algorithm must be explicitly specified and no longer defaults to 'sha1'.")
     elif hash_alg == "sha1":
         tpm_hash_alg = TpmAlgorithm.SHA1
     elif hash_alg == "sha256":
         tpm_hash_alg = TpmAlgorithm.SHA256
     else:
-        raise ValueError("Only 'sha1' and 'sha256' PCR banks are supported.")
+        exit("error: Only 'sha1' and 'sha256' algorithms are supported.")
 
     this_pcrs = PcrBank(hash_alg)
     next_pcrs = PcrBank(hash_alg)
