@@ -39,7 +39,7 @@ def main():
             bank_spec = pcr_list.split(":")
             hash_alg = bank_spec[0]
             pcr_list = bank_spec[1]
-        else:
+        elif not args.hash_alg:
             print("WARNING: PCR list does not specify hash algorithm. This will be an error in the future!",
                   file=sys.stderr)
         wanted_pcrs = [int(idx) for idx in pcr_list.split(",")]
