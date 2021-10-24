@@ -5,8 +5,6 @@ from .device_path import *
 from .tpm_constants import TpmAlgorithm
 from .util import (to_hex, hexdump, guid_to_UUID)
 
-SHA1_DIGEST_SIZE = 20
-
 def parse_efi_tcg2_header_event(buf):
     buf = BinaryReader(io.BytesIO(buf))
     log = {}
