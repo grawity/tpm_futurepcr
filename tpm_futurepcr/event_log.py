@@ -59,8 +59,6 @@ def show_log_entry(e):
     event_type_str = TpmEventType(event_type)
     print()
     print("\033[1mPCR %d -- Event %08X <%s>\033[m" % (e["pcr_idx"], event_type, event_type_str))
-    if "pcr_extend_value" in e:
-        print("Extend (SHA1): %s" % to_hex(e["pcr_extend_value"]))
     event_data = e["event_data"]
     if event_type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
         if verbose:
@@ -106,8 +104,11 @@ def enum_log_entries(path=None):
                 event["event_type"] = TpmEventType(event["event_type"])
                 if tpm_ver == 1:
                     # section 5.1, SHA1 Event Log Entry Format
-                    event["pcr_extend_value"] = rd.read(SHA1_DIGEST_SIZE)
-                    event["pcr_extend_values_dict"] = {TpmAlgorithm.SHA1: event["pcr_extend_value"]}
+                    pcr_val = {}
+                    pcr_val["alg_id"] = TpmAlgorithm.SHA1
+                    pcr_val["digest"] = rd.read(20)
+                    event["pcr_extend_values"] = [pcr_val]
+                    event["pcr_extend_values_dict"] = {TpmAlgorithm.SHA1: pcr_val["digest"]}
                 elif tpm_ver == 2:
                     # section 5.2, Crypto Agile Log Entry Format
                     event["pcr_count"] = rd.read_u32_le()
@@ -122,8 +123,6 @@ def enum_log_entries(path=None):
                         pcr_val["digest"] = rd.read(tcg_hdr["digest_sizes_dict"][pcr_val["alg_id"]])
                         event["pcr_extend_values"].append(pcr_val)
                         event["pcr_extend_values_dict"][pcr_val["alg_id"]] = pcr_val["digest"]
-                        if pcr_val["alg_id"] == TpmAlgorithm.SHA1:
-                            event["pcr_extend_value"] = pcr_val["digest"]
                 # same across both formats
                 event["event_size"] = rd.read_u32_le()
                 event["event_data"] = rd.read(event["event_size"])
