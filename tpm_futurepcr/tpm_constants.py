@@ -64,7 +64,9 @@ class TpmEventType(enum.IntEnum):
     NONHOST_INFO                    = 0x00000011
     OMIT_BOOT_DEVICE_EVENTS         = 0x00000012
 
-    # UEFI events <https://trustedcomputinggroup.org/wp-content/uploads/TCG_EFI_Platform_1_22_Final_-v15.pdf#page=32>
+    # UEFI events
+    # https://trustedcomputinggroup.org/wp-content/uploads/TCG_EFI_Platform_1_22_Final_-v15.pdf#page=32
+    # https://github.com/canonical/tcglog-parser/blob/master/constants.go
     EFI_EVENT_BASE                  = 0x80000000
     EFI_VARIABLE_DRIVER_CONFIG      = 0x80000001
     EFI_VARIABLE_BOOT               = 0x80000002
@@ -75,7 +77,13 @@ class TpmEventType(enum.IntEnum):
     EFI_ACTION                      = 0x80000007
     EFI_PLATFORM_FIRMWARE_BLOB      = 0x80000008
     EFI_HANDOFF_TABLES              = 0x80000009
+    EFI_PLATFORM_FIRMWARE_BLOB2     = 0x8000000A
+    EFI_HANDOFF_TABLES2             = 0x8000000B
+    EFI_VARIABLE_BOOT2              = 0x8000000C
+    EFI_HCRTM_EVENT                 = 0x80000010
     EFI_VARIABLE_AUTHORITY          = 0x800000E0
+    EFI_SPDM_FIRMWARE_BLOB          = 0x800000E1
+    EFI_SPDM_FIRMWARE_CONFIG        = 0x800000E2
 
 class TpmPostCode():
     POST_CODE   = b"POST CODE"
