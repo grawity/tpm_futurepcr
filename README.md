@@ -1,4 +1,4 @@
-The `tpm_futurepcr` script allows guessing what the future PCR[4] value will be after a kernel upgrade, before you reboot. This is useful when your rootfs is LUKS-encrypted with a key sealed by the TPM against PCR[4] (among others).
+The `tpm_futurepcr` script allows guessing what the future PCR4 value will be after a kernel upgrade, before you reboot. This is useful when your rootfs is LUKS-encrypted with a key sealed by the TPM against PCR4 (among others).
 
 This script only recognizes measurements done by native UEFI LoadImage() – i.e. hashes of PE/COFF executables such as vmlinuz.efi. (Although it does parse the TPM 1.2 event log, it does not (yet) recognize measurements done by TrustedGRUB on BIOS systems, and in fact I'm not entirely sure whether the entire premise of sealing data against user-specified PCR values is even _possible_ in the TPM 1.2 API.)
 
@@ -8,7 +8,11 @@ This script will understand the event log in both SHA1-only (TPM 1.2) and Crypto
 
 ### Warning
 
-Neither systemd-boot nor EFISTUB currently measure the initramfs images. It is not safe to rely on PCR[4] _unless_ you are using a combined kernel+initramfs file (such as the one produced by mksignkernels), or you are using a bootloader which measures the initramfs separately.
+Until Linux 5.17, neither systemd-boot nor EFISTUB measure the loaded initrd images, making it unsafe to rely on PCR4 alone. (Starting with Linux 5.17, the initrd measurements are now stored in PCR9.) Additionally, only systemd-boot measures the _command line_ into PCR8; EFISTUB on its own does not.
+
+It is recommended to use PCR-based sealing (whether it is PCR4 with tpm\_futurepcr or PCR7 with Secure Boot) only with a combined [systemd-stub][] "kernel + initramfs" image, such as the one produced by `mkinitcpio -U`.
+
+[systemd-stub]: https://www.freedesktop.org/software/systemd/man/systemd-stub.html
 
 ### Dependencies
 
