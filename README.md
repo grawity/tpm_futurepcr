@@ -17,7 +17,7 @@ It is recommended to use PCR-based sealing (whether it is PCR4 with tpm\_futurep
 ### Dependencies
 
  * python-signify (for calculating Authenticode digests)
- * tpm2-tools (for reading current PCR values)
+ * tpm2-tools (for reading current PCR values in kernels older than v5.12)
 
 ### Installation
   

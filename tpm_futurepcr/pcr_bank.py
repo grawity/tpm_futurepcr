@@ -1,4 +1,5 @@
 import hashlib
+import os
 import subprocess
 
 from .util import is_tpm2, in_path
@@ -7,7 +8,16 @@ NUM_PCRS = 24
 
 def read_current_pcrs(alg="sha1"):
     pcr_size = hashlib.new(alg).digest_size
-    if is_tpm2():
+    if os.path.exists("/sys/class/tpm/tpm0/pcr-%s/0" % alg):
+        # New sysfs exports in kernel v5.12
+        pcrs = {}
+        for idx in range(NUM_PCRS):
+            with open("/sys/class/tpm/tpm0/pcr-%s/%d" % (alg, idx), "r") as fh:
+                buf = fh.read().strip()
+                buf = bytes.fromhex(buf)
+                pcrs[idx] = buf
+        return pcrs
+    elif is_tpm2():
         if in_path("tpm2_pcrread"): # tpm2-utils 4.0 or later
             cmd = ["tpm2_pcrread", alg, "-Q", "-o", "/dev/stdout"]
         elif in_path("tpm2_pcrlist"): # tpm2-utils 3.x
@@ -19,7 +29,8 @@ def read_current_pcrs(alg="sha1"):
         res.check_returncode()
         buf = res.stdout
         assert(len(buf) % pcr_size == 0)
-        return {idx: buf[idx*pcr_size:(idx+1)*pcr_size] for idx in range(len(buf) // pcr_size)}
+        return {idx: buf[idx*pcr_size:(idx+1)*pcr_size]
+                for idx in range(len(buf) // pcr_size)}
     else:
         if alg != "sha1":
             raise Exception("TPM v1 only supports the SHA1 PCR bank")
