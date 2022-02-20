@@ -14,8 +14,7 @@ def read_current_pcrs(alg="sha1"):
         for idx in range(NUM_PCRS):
             with open("/sys/class/tpm/tpm0/pcr-%s/%d" % (alg, idx), "r") as fh:
                 buf = fh.read().strip()
-                buf = bytes.fromhex(buf)
-                pcrs[idx] = buf
+                pcrs[idx] = bytes.fromhex(buf)
         return pcrs
     elif is_tpm2():
         if in_path("tpm2_pcrread"): # tpm2-utils 4.0 or later
@@ -28,9 +27,11 @@ def read_current_pcrs(alg="sha1"):
         res = subprocess.run(cmd, stdout=subprocess.PIPE)
         res.check_returncode()
         buf = res.stdout
-        assert(len(buf) % pcr_size == 0)
-        return {idx: buf[idx*pcr_size:(idx+1)*pcr_size]
-                for idx in range(len(buf) // pcr_size)}
+        assert(len(buf) == NUM_PCRS * pcr_size)
+        pcrs = {}
+        for idx in range(NUM_PCRS):
+            pcrs[idx] = buf[idx*pcr_size : (idx+1)*pcr_size]
+        return pcrs
     else:
         if alg != "sha1":
             raise Exception("TPM v1 only supports the SHA1 PCR bank")
@@ -40,8 +41,7 @@ def read_current_pcrs(alg="sha1"):
                 if line.startswith("PCR-"):
                     idx, buf = line.strip().split(": ")
                     idx = int(idx[4:], 10)
-                    buf = bytes.fromhex(buf)
-                    pcrs[idx] = buf
+                    pcrs[idx] = bytes.fromhex(buf)
         return pcrs
 
 def extend_pcr_with_hash(pcr_value, extend_value, alg="sha1"):
