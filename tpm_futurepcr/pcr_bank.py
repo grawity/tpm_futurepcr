@@ -24,13 +24,12 @@ def read_current_pcrs(alg="sha1"):
         else:
             # TODO: try using IBM TSS tools
             raise Exception("tpm2_pcrread or tpm2_pcrlist not found")
-        res = subprocess.run(cmd, stdout=subprocess.PIPE)
-        res.check_returncode()
-        buf = res.stdout
-        assert(len(buf) == NUM_PCRS * pcr_size)
         pcrs = {}
-        for idx in range(NUM_PCRS):
-            pcrs[idx] = buf[idx*pcr_size : (idx+1)*pcr_size]
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE) as proc:
+            if proc.wait() != 0:
+                raise subprocess.CalledProcessError(proc.returncode, proc.args)
+            for idx in range(NUM_PCRS):
+                pcrs[idx] = proc.stdout.read(pcr_size)
         return pcrs
     else:
         if alg != "sha1":
