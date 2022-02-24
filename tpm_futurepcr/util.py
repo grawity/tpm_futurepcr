@@ -2,6 +2,7 @@ import hashlib
 import os
 import signify.fingerprinter
 import subprocess
+import argparse
 
 def to_hex(buf):
     import binascii
@@ -119,3 +120,16 @@ def find_mountpoint_by_partuuid(partuuid):
                          stdout=subprocess.PIPE)
     res.check_returncode()
     return res.stdout.splitlines()[0].decode()
+
+class KeyValueAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if getattr(namespace, self.dest, None) is None:
+            setattr(namespace, self.dest, dict())
+        kvmap = getattr(namespace, self.dest)
+        if not isinstance(values, list):
+            values = [ values ]
+        kvpairs = [ v.split('=', 1) for v in values ]
+        try:
+            kvmap.update(kvpairs)
+        except ValueError:
+            raise argparse.ArgumentTypeError("Value for option %s malformed: %s" % (self.dest, values))
