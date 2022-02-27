@@ -21,6 +21,8 @@ def main():
                         help="write binary PCR values to specified file")
     parser.add_argument("--allow-unexpected-bsa", action="store_true",
                         help="accept BOOT_SERVICES_APPLICATION events with weird paths")
+    parser.add_argument("--substitute-bsa-unix-path", action=KeyValueAction,
+                        help="substitute BOOT_SERVICES_APPLICATION path (syntax: <computed unix path>=<new unix path>)")
     parser.add_argument("--compare", action="store_true",
                         help="compare computed PCRs against live values")
     parser.add_argument("-v", "--verbose", action="store_true",
@@ -91,6 +93,8 @@ def main():
             event_data = parse_efi_bsa_event(event["event_data"])
             try:
                 unix_path = device_path_to_unix_path(event_data["device_path_vec"])
+                if args.substitute_bsa_unix_path:
+                    unix_path = args.substitute_bsa_unix_path.get(unix_path, unix_path)
             except Exception as e:
                 print(e)
                 errors = 1
