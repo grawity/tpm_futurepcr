@@ -127,8 +127,8 @@ class KeyValueAction(argparse.Action):
             setattr(namespace, self.dest, dict())
         kvmap = getattr(namespace, self.dest)
         if not isinstance(values, list):
-            values = [ values ]
-        kvpairs = [ v.split('=', 1) for v in values ]
+            values = [values]
+        kvpairs = [v.split("=", 1) for v in values]
         try:
             kvmap.update(kvpairs)
         except ValueError:
