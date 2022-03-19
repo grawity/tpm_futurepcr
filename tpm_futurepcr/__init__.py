@@ -132,7 +132,7 @@ def main():
                     if len(old_cmdline) % 2 != 0:
                         print("warning: Expecting EV_IPL data to contain UTF-16, but length isn't a multiple of 2",
                               file=sys.stderr)
-                        old_cmdline = old_cmdline[:-1]
+                        old_cmdline += b'\0'
                     old_cmdline = loader_decode_pcr8(old_cmdline)
                     print("-- extending with systemd-boot cmdline --")
                     print("this cmdline:", repr(old_cmdline))
