@@ -6,6 +6,7 @@ from .event_log import *
 from .pcr_bank import *
 from .systemd_boot import (
     loader_encode_pcr8,
+    loader_decode_pcr8,
     loader_get_next_cmdline,
 )
 from .tpm_constants import TpmEventType
@@ -124,7 +125,15 @@ def main():
             try:
                 cmdline = loader_get_next_cmdline(last_efi_binary)
                 if args.verbose:
-                    old_cmdline = event["event_data"][:-1].decode("utf-16le")
+                    old_cmdline = event["event_data"]
+                    # 2022-03-19 grawity: In the past, we had to strip away the last \0 byte for
+                    # some reason (which I don't remember)... but apparently now we don't? Let's
+                    # add a warning so that hopefully I remember why it was necessary.
+                    if len(old_cmdline) % 2 != 0:
+                        print("warning: Expecting EV_IPL data to contain UTF-16, but length isn't a multiple of 2",
+                              file=sys.stderr)
+                        old_cmdline = old_cmdline[:-1]
+                    old_cmdline = loader_decode_pcr8(old_cmdline)
                     print("-- extending with systemd-boot cmdline --")
                     print("this cmdline:", repr(old_cmdline))
                     print("next cmdline:", repr(cmdline))

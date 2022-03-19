@@ -85,5 +85,14 @@ def loader_get_next_cmdline(last_efi_binary=None):
         return loader_get_cmdline(entry, esp)
 
 def loader_encode_pcr8(cmdline):
-    cmdline = (cmdline + "\0").encode("utf-16le")
-    return cmdline
+    """
+    Encode kernel command line the same way systemd-stub does it before measuring.
+    """
+    return (cmdline + "\0").encode("utf-16le")
+
+def loader_decode_pcr8(cmdline):
+    """
+    Reverse the encoding for a kernel command line we've read from EV_IPL.
+    """
+    assert(cmdline.endswith(b"\0\0"))
+    return cmdline.decode("utf-16le")[:-1]
