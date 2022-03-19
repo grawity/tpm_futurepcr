@@ -42,8 +42,7 @@ def main():
             hash_alg = bank_spec[0]
             pcr_list = bank_spec[1]
         elif not args.hash_alg:
-            print("WARNING: PCR list does not specify hash algorithm. This will be an error in the future!",
-                  file=sys.stderr)
+            exit("error: PCR hash algorithm must be explicitly specified and no longer defaults to 'sha1'.")
         wanted_pcrs = [int(idx) for idx in pcr_list.split(",")]
     else:
         verbose_all_pcrs = True
