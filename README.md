@@ -2,7 +2,7 @@ The `tpm_futurepcr` script allows pre-calculating what the future PCR4 value wil
 
 This script only recognizes measurements done by native UEFI LoadImage() – i.e. hashes of PE/COFF executables such as vmlinuz.efi. (Although it does parse the TPM 1.2 event log, it does not (yet) recognize measurements done by TrustedGRUB on BIOS systems, and in fact I'm not entirely sure whether the entire premise of sealing data against user-specified PCR values is even _possible_ in the TPM 1.2 API.)
 
-As an additional hack, this script also recognizes systemd-boot and updates PCR[8] according to the future kernel command line.
+As an additional hack, this script also recognizes systemd-boot and updates its EV\_IPL event according to the future kernel command line.
 
 This script will understand the event log in both SHA1-only (TPM 1.2) and Crypto-Agile (TPM 2.0, Linux kernel 5.3+) formats.
 

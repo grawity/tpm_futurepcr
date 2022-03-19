@@ -119,6 +119,8 @@ def main():
                 print("warning: couldn't map EfiBootServicesApplication event to a Linux path",
                       file=sys.stderr)
 
+        # Handle systemd EFI stub "kernel command line" measurements (found in
+        # PCR 8 up to systemd v250, but PCR 12 afterwards).
         if event["event_type"] == TpmEventType.IPL and (idx in wanted_pcrs):
             try:
                 cmdline = loader_get_next_cmdline(last_efi_binary)
