@@ -27,14 +27,14 @@ It is recommended to use PCR-based sealing (whether it is PCR4 with tpm\_futurep
 
 Normally sealing data against PCRs starts by creating a "policy" which specifies the PCR values. In the Intel TPM 2.0 stack, this is done with *tpm2_createpolicy*:
 
-    tpm2_createpolicy -P -L sha256:0,2,4,7 -f policy.bin
+    tpm2_createpolicy --policy-pcr --pcr-list=sha256:0,2,4,7 --policy=policy.bin
 
 This automatically uses current PCR values, and can be written to do so explicitly:
 
-    tpm2_pcrlist -L sha256:0,2,4,7 -Q -o pcrvalues.bin
-    tpm2_createpolicy -P -L sha256:0,2,4,7 -F pcrvalues.bin -f policy.bin
+    tpm2_pcrread sha256:0,2,4,7 -Q -o pcrvalues.bin
+    tpm2_createpolicy --policy-pcr --pcr-list=sha256:0,2,4,7 --pcr=pcrvalues.bin --policy=policy.bin
 
 To do the same with *future* PCR values, use tpm\_futurepcr:
 
     tpm_futurepcr -L 0,2,4,7 -o pcrvalues.bin
-    tpm2_createpolicy -P -L sha256:0,2,4,7 -F pcrvalues.bin -f policy.bin
+    tpm2_createpolicy --policy-pcr --pcr-list=sha256:0,2,4,7 --pcr=pcrvalues.bin --policy=policy.bin
