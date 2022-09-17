@@ -15,7 +15,7 @@ class TestTPM_PredictPCR(unittest.TestCase):
     def test_replay_compare_eventlog_tpm2_BIOS_ROM(self):
         file_mocks = []
 
-        with open('tests/resources/tpm_binary_measurements', 'rb') as f:
+        with open('tests/fixtures/tpm_binary_measurements', 'rb') as f:
             file_mocks.append(f.read())
 
         for i in range(24):

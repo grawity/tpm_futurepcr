@@ -9,5 +9,5 @@ def seq_mock_open(contents: list[str]):
 
 
 def load_current_pcrs() -> dict[int, str]:
-    with open('tests/resources/pcr-sha256') as f:
+    with open('tests/fixtures/pcr-sha256') as f:
         return {idx: value for idx, value in enumerate(f.readlines())}
