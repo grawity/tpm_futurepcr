@@ -22,8 +22,10 @@ if __name__ == "__main__":
 
     for event in enum_log_entries(args.log_path):
         idx = event["pcr_idx"]
+        if idx not in wanted_pcrs:
+            continue
 
-        _verbose_pcr = logger.level <= logging.VERBOSE and idx in wanted_pcrs
+        _verbose_pcr = logger.level <= logging.VERBOSE
         if _verbose_pcr:
             show_log_entry(event)
 

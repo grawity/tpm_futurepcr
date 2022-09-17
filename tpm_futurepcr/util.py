@@ -15,15 +15,17 @@ def to_hex(buf):
 
 
 def hexdump(buf, max_len=None):
-    if max_len is None:
-        max_len = len(buf)
-    else:
-        max_len = min(max_len, len(buf))
+    # max_len must be smaller than len(buf), if defined
+    max_len = min(max_len or len(buf), len(buf))
+
+    # print the hex codes and their ascii representation
     for i in range(0, max_len, 16):
         row = buf[i:i+16]
-        hexs = ["%02X" % b for b in row] + ["  "] * 16
-        text = [chr(b) if 0x20 < b < 0x7f else "." for b in row] + [" "] * 16
+        hexs = ["%02X" % b for b in row]
+        text = [chr(b) if 0x20 < b < 0x7f else "." for b in row]
         logger.debug("0x%08x: %s |%s|", i, " ".join(hexs[:16]), "".join(text[:16]))
+
+    # notify the user in case there were bytes left unprinted
     if len(buf) > max_len:
         logger.debug("(%d more bytes)", len(buf) - max_len)
 

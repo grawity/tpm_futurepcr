@@ -2,7 +2,7 @@ from pprint import pformat
 
 from .device_path import *
 from .tpm_constants import TpmAlgorithm
-from .util import (hexdump, guid_to_UUID)
+from .util import hexdump, guid_to_UUID
 
 import tpm_futurepcr.logging as logging
 
