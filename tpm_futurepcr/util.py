@@ -2,7 +2,11 @@ import hashlib
 import os
 import signify.fingerprinter
 import subprocess
-import argparse
+
+
+import tpm_futurepcr.logging as logging
+
+logger = logging.getLogger('util')
 
 
 def to_hex(buf):
@@ -17,12 +21,11 @@ def hexdump(buf, max_len=None):
         max_len = min(max_len, len(buf))
     for i in range(0, max_len, 16):
         row = buf[i:i+16]
-        offs = "0x%08x:" % i
         hexs = ["%02X" % b for b in row] + ["  "] * 16
         text = [chr(b) if 0x20 < b < 0x7f else "." for b in row] + [" "] * 16
-        print(offs, " ".join(hexs[:16]), "|%s|" % "".join(text[:16]))
+        logger.debug("0x%08x: %s |%s|", i, " ".join(hexs[:16]), "".join(text[:16]))
     if len(buf) > max_len:
-        print("(%d more bytes)" % (len(buf) - max_len))
+        logger.debug("(%d more bytes)", len(buf) - max_len)
 
 
 def guid_to_UUID(buf):
