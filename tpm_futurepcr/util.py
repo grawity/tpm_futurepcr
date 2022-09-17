@@ -4,9 +4,11 @@ import signify.fingerprinter
 import subprocess
 import argparse
 
+
 def to_hex(buf):
     import binascii
     return binascii.hexlify(buf).decode()
+
 
 def hexdump(buf, max_len=None):
     if max_len is None:
@@ -22,16 +24,19 @@ def hexdump(buf, max_len=None):
     if len(buf) > max_len:
         print("(%d more bytes)" % (len(buf) - max_len))
 
+
 def guid_to_UUID(buf):
     import struct
     import uuid
     buf = struct.pack(">LHH8B", *struct.unpack("<LHH8B", buf))
     return uuid.UUID(bytes=buf)
 
+
 def hash_bytes(buf, alg="sha1"):
     h = hashlib.new(alg)
     h.update(buf)
     return h.digest()
+
 
 def hash_file(path, alg="sha1"):
     h = hashlib.new(alg)
@@ -43,12 +48,14 @@ def hash_file(path, alg="sha1"):
             h.update(buf)
     return h.digest()
 
+
 def hash_pecoff(path, alg="sha1"):
     with open(path, "rb") as fh:
         fpr = signify.fingerprinter.AuthenticodeFingerprinter(fh)
         fpr.add_authenticode_hashers(getattr(hashlib, alg))
         return fpr.hash()[alg]
     return None
+
 
 def read_pecoff_section(path, section):
     from .binary_reader import BinaryReader
@@ -99,14 +106,17 @@ def read_pecoff_section(path, section):
         data = br.read(found_size)
         return data
 
+
 def read_efi_variable(name, guid):
     path = "/sys/firmware/efi/efivars/%s-%s" % (name, guid)
     with open(path, "rb") as fh:
         buf = fh.read()
         return buf[4:]
 
+
 def is_tpm2():
     return os.path.exists("/dev/tpmrm0")
+
 
 def in_path(exe):
     for p in os.environ["PATH"].split(":"):
@@ -114,22 +124,10 @@ def in_path(exe):
             return True
     return False
 
+
 def find_mountpoint_by_partuuid(partuuid):
     res = subprocess.run(["findmnt", "-S", "PARTUUID=" + str(partuuid).lower(),
                                      "-o", "TARGET", "-r", "-n"],
                          stdout=subprocess.PIPE)
     res.check_returncode()
     return res.stdout.splitlines()[0].decode()
-
-class KeyValueAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if getattr(namespace, self.dest, None) is None:
-            setattr(namespace, self.dest, dict())
-        kvmap = getattr(namespace, self.dest)
-        if not isinstance(values, list):
-            values = [values]
-        kvpairs = [v.split("=", 1) for v in values]
-        try:
-            kvmap.update(kvpairs)
-        except ValueError:
-            raise argparse.ArgumentTypeError("Value for option %s malformed: %s" % (self.dest, values))
