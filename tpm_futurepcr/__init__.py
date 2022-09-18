@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import argparse
 
+from .device_path import device_path_to_unix_path
 from .event_log import *
 from .pcr_bank import *
-from .systemd_boot import (
-    loader_encode_pcr8,
-    loader_decode_pcr8,
-    loader_get_next_cmdline,
-)
+from .systemd_boot import loader_encode_pcr8, loader_decode_pcr8, loader_get_next_cmdline
 from .tpm_constants import TpmEventType
 from .util import *
 
@@ -17,69 +13,13 @@ import tpm_futurepcr.logging as logging
 logger = logging.getLogger('tpm_futurepcr')
 
 
-def create_argparser() -> argparse.ArgumentParser:
-    def _validate_pcrlist(pcr_list: str) -> tuple[list[int], str] | list[int]:
-        if "+" in pcr_list:
-            raise argparse.ArgumentTypeError("PCR specifier may only contain one bank.")
-
-        try:
-            hash_alg, pcr_list = tuple(pcr_list.split(":"))
-        except ValueError:
-            hash_alg = None
-        finally:
-            pcr_list = list(map(int, pcr_list.split(",")))
-
-        return pcr_list, hash_alg
-
-    class _KeyValueAction(argparse.Action):
-        def __call__(self, parser, namespace, values, option_string=None):
-            if getattr(namespace, self.dest, None) is None:
-                setattr(namespace, self.dest, dict())
-            kvmap = getattr(namespace, self.dest)
-            if not isinstance(values, list):
-                values = [values]
-            kvpairs = [v.split("=", 1) for v in values]
-            try:
-                kvmap.update(kvpairs)
-            except ValueError:
-                raise argparse.ArgumentTypeError("Value for option %s malformed: %s" % (self.dest, values))
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-L", "--pcr-list", type=_validate_pcrlist, default=','.join(list(map(str, range(24)))), help="comma-separated list of PCR registers")
-    parser.add_argument("-H", "--hash-alg", help="specify the hash algorithm", choices=['sha1', 'sha256'])
-    parser.add_argument("-o", "--output", type=Path, help="write binary PCR values to specified file")
-    parser.add_argument("--allow-unexpected-bsa", action="store_true", help="accept BOOT_SERVICES_APPLICATION events with weird paths")
-    parser.add_argument("--substitute-bsa-unix-path", action=_KeyValueAction, help="substitute BOOT_SERVICES_APPLICATION path (syntax: <computed unix path>=<new unix path>)")
-    parser.add_argument("--compare", action="store_true", help="compare computed PCRs against live values")
-    parser.add_argument("--log-path", type=Path, help="read binary log from an alternative path")
-
-    parser.add_argument('-d', '--debug', help="Print lots of debugging statements", action="store_const", dest="loglevel", const=logging.DEBUG, default=logging.INFO)
-    parser.add_argument('-v', '--verbose', help="Be verbose", action="store_const", dest="loglevel", const=logging.VERBOSE)
-
-    return parser
-
-
-def postprocess_args(args: argparse.Namespace) -> argparse.Namespace:
-    if (args.hash_alg is None and args.pcr_list[1] is None) or \
-       (args.hash_alg is not None and args.pcr_list[1] is not None and args.hash_alg != args.pcr_list[1]):
-        raise argparse.ArgumentTypeError("PCR hash algorithm must be explicitly specified either in the pcr list or with the -H flag")
-
-    # populate properly the hash_alg argument
-    args.hash_alg = TpmAlgorithm[args.hash_alg or args.pcr_list[1].upper()]
-    args.pcr_list = args.pcr_list[0]
-
-    logging.getLogger().setLevel(args.loglevel)
-
-    return args
-
-
-def process_log(args, wanted_pcrs, hash_alg):
-    this_pcrs = PcrBank(hash_alg)
-    next_pcrs = PcrBank(hash_alg)
+def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, substitute_bsa_unix_path: dict | None, allow_unexpected_bsa: bool):
+    this_pcrs = PcrBank(hash_alg.name.lower())
+    next_pcrs = PcrBank(hash_alg.name.lower())
     errors = False
     last_efi_binary = None
 
-    for event in enum_log_entries(args.log_path):
+    for event in enum_log_entries(log_path):
         idx = event["pcr_idx"]
         if idx not in wanted_pcrs:
             continue
@@ -93,7 +33,7 @@ def process_log(args, wanted_pcrs, hash_alg):
                 logger.verbose("event updates Windows virtual PCR[-1], skipping")
             continue
 
-        this_extend_value = event["pcr_extend_values"].get(args.hash_alg)
+        this_extend_value = event["pcr_extend_values"].get(hash_alg)
         next_extend_value = this_extend_value
 
         if this_extend_value is None:
@@ -105,8 +45,8 @@ def process_log(args, wanted_pcrs, hash_alg):
             event_data = parse_efi_bsa_event(event["event_data"])
             try:
                 unix_path = device_path_to_unix_path(event_data["device_path_vec"])
-                if args.substitute_bsa_unix_path:
-                    unix_path = args.substitute_bsa_unix_path.get(unix_path, unix_path)
+                if substitute_bsa_unix_path:
+                    unix_path = substitute_bsa_unix_path.get(unix_path, unix_path)
             except Exception as e:
                 logger.error(e)
                 errors = True
@@ -124,7 +64,7 @@ def process_log(args, wanted_pcrs, hash_alg):
                     logger.verbose("guessed extend value = %s", to_hex(next_extend_value))
             else:
                 # This might be a firmware item such as the boot menu.
-                if not args.allow_unexpected_bsa:
+                if not allow_unexpected_bsa:
                     logger.error("Unexpected boot events found. Binding to these PCR values "
                                  "is not advised, as it might be difficult to reproduce this state "
                                  "later. Exiting.")
@@ -151,7 +91,7 @@ def process_log(args, wanted_pcrs, hash_alg):
                 cmdline = loader_encode_pcr8(cmdline)
                 next_extend_value = hash_bytes(cmdline, hash_alg)
             except FileNotFoundError:
-                # Either some of the EFI variables, or the ESP, or the .conf, are missing.
+                # Either EFI variables, the ESP, or the .conf, are missing.
                 # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
                 logger.verbose("-- not touching non-systemd IPL event --")
 

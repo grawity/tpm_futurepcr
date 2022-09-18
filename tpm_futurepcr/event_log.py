@@ -1,7 +1,9 @@
 from pprint import pformat
+import io
 
-from .device_path import *
-from .tpm_constants import TpmAlgorithm
+from .binary_reader import BinaryReader
+from .device_path import parse_efi_device_path
+from .tpm_constants import TpmAlgorithm, TpmEventType
 from .util import hexdump, guid_to_UUID
 
 import tpm_futurepcr.logging as logging
@@ -65,7 +67,8 @@ def show_log_entry(e):
     event_data = e["event_data"]
     if event_type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
         if logger.level == logging.DEBUG:
-            hexdump(event_data)
+            for i in hexdump(event_data):
+                logger.debug(i)
             ed = parse_efi_bsa_event(event_data)
             logger.debug(pformat(ed))
         else:
@@ -80,14 +83,17 @@ def show_log_entry(e):
                         TpmEventType.EFI_VARIABLE_BOOT,
                         TpmEventType.EFI_VARIABLE_DRIVER_CONFIG}:
         if logger.level == logging.DEBUG:
-            hexdump(event_data, 64)
+            for i in hexdump(event_data, 64):
+                logger.debug(i)
             ed = parse_efi_variable_event(event_data)
             logger.debug(pformat(ed))
         else:
             ed = parse_efi_variable_event(event_data)
             logger.verbose("Variable: %r {%s}", ed["unicode_name"], ed["variable_name_uuid"])
     else:
-        hexdump(event_data, 64)
+        for i in hexdump(event_data, 64):
+            logger.debug(i)
+
 
 # ~/src/linux/include/linux/tpm_eventlog.h
 # TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
