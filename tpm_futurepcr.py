@@ -58,7 +58,7 @@ def postprocess_args(args: argparse.Namespace) -> argparse.Namespace:
        (args.hash_alg is not None and args.pcr_list[1] is not None and args.hash_alg != args.pcr_list[1]):
         parser.print_usage()
         print('tpm_futurepcr.py: error: argument -H/--hash-alg: if specified in multiple places, hash algorithm value must be the same in all of them.')
-        sys.exit(0)
+        sys.exit(2)
 
     # populate properly the hash_alg argument
     args.hash_alg = TpmAlgorithm[(args.hash_alg or args.pcr_list[1]).upper()]
