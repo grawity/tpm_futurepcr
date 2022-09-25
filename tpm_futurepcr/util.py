@@ -2,25 +2,38 @@ import hashlib
 import os
 import signify.fingerprinter
 import subprocess
-import argparse
+
+
+import tpm_futurepcr.logging as logging
+
+logger = logging.getLogger('util')
+
 
 def to_hex(buf):
     import binascii
     return binascii.hexlify(buf).decode()
 
+
 def hexdump(buf, max_len=None):
-    if max_len is None:
-        max_len = len(buf)
-    else:
-        max_len = min(max_len, len(buf))
+    # max_len must be smaller than len(buf), if defined
+    max_len = min(max_len or len(buf), len(buf))
+
+    hexdump_contents = []
+    # print the hex codes and their ascii representation
     for i in range(0, max_len, 16):
         row = buf[i:i+16]
-        offs = "0x%08x:" % i
-        hexs = ["%02X" % b for b in row] + ["  "] * 16
-        text = [chr(b) if 0x20 < b < 0x7f else "." for b in row] + [" "] * 16
-        print(offs, " ".join(hexs[:16]), "|%s|" % "".join(text[:16]))
+        hexs = ["  "] * 16 if len(row) < 16 else []
+        text = ["  "] * 16 if len(row) < 16 else []
+        hexs[:len(row)] = ["%02X" % b for b in row]
+        text[:len(row)] = [chr(b) if 0x20 < b < 0x7f else "." for b in row]
+        hexdump_contents.append(f'0x{i:08x}: {" ".join(hexs)} |{"".join(text)}|')
+
+    # notify the user in case there were bytes left unprinted
     if len(buf) > max_len:
-        print("(%d more bytes)" % (len(buf) - max_len))
+        hexdump_contents.append(f"({len(buf) - max_len} more bytes)")
+
+    return hexdump_contents
+
 
 def guid_to_UUID(buf):
     import struct
@@ -28,10 +41,12 @@ def guid_to_UUID(buf):
     buf = struct.pack(">LHH8B", *struct.unpack("<LHH8B", buf))
     return uuid.UUID(bytes=buf)
 
+
 def hash_bytes(buf, alg="sha1"):
     h = hashlib.new(alg)
     h.update(buf)
     return h.digest()
+
 
 def hash_file(path, alg="sha1"):
     h = hashlib.new(alg)
@@ -43,12 +58,14 @@ def hash_file(path, alg="sha1"):
             h.update(buf)
     return h.digest()
 
+
 def hash_pecoff(path, alg="sha1"):
     with open(path, "rb") as fh:
         fpr = signify.fingerprinter.AuthenticodeFingerprinter(fh)
         fpr.add_authenticode_hashers(getattr(hashlib, alg))
         return fpr.hash()[alg]
     return None
+
 
 def read_pecoff_section(path, section):
     from .binary_reader import BinaryReader
@@ -99,14 +116,17 @@ def read_pecoff_section(path, section):
         data = br.read(found_size)
         return data
 
+
 def read_efi_variable(name, guid):
     path = "/sys/firmware/efi/efivars/%s-%s" % (name, guid)
     with open(path, "rb") as fh:
         buf = fh.read()
         return buf[4:]
 
+
 def is_tpm2():
     return os.path.exists("/dev/tpmrm0")
+
 
 def in_path(exe):
     for p in os.environ["PATH"].split(":"):
@@ -114,22 +134,10 @@ def in_path(exe):
             return True
     return False
 
+
 def find_mountpoint_by_partuuid(partuuid):
     res = subprocess.run(["findmnt", "-S", "PARTUUID=" + str(partuuid).lower(),
                                      "-o", "TARGET", "-r", "-n"],
                          stdout=subprocess.PIPE)
     res.check_returncode()
     return res.stdout.splitlines()[0].decode()
-
-class KeyValueAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if getattr(namespace, self.dest, None) is None:
-            setattr(namespace, self.dest, dict())
-        kvmap = getattr(namespace, self.dest)
-        if not isinstance(values, list):
-            values = [values]
-        kvpairs = [v.split("=", 1) for v in values]
-        try:
-            kvmap.update(kvpairs)
-        except ValueError:
-            raise argparse.ArgumentTypeError("Value for option %s malformed: %s" % (self.dest, values))

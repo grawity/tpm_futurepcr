@@ -1,9 +1,15 @@
-from pprint import pprint
+from pprint import pformat
+import io
 
 from .binary_reader import BinaryReader
-from .device_path import *
-from .tpm_constants import TpmAlgorithm
-from .util import (to_hex, hexdump, guid_to_UUID)
+from .device_path import parse_efi_device_path
+from .tpm_constants import TpmAlgorithm, TpmEventType
+from .util import hexdump, guid_to_UUID
+
+import tpm_futurepcr.logging as logging
+
+logger = logging.getLogger('event_log')
+
 
 def parse_efi_tcg2_header_event(buf):
     buf = BinaryReader(io.BytesIO(buf))
@@ -27,6 +33,7 @@ def parse_efi_tcg2_header_event(buf):
     log["vendor_info"]          = buf.read(log["vendor_info_len"])
     return log
 
+
 def parse_efi_bsa_event(buf, uintn_size=None):
     buf = BinaryReader(io.BytesIO(buf))
     log = {}
@@ -37,6 +44,7 @@ def parse_efi_bsa_event(buf, uintn_size=None):
     log["device_path"]      = buf.read(log["device_path_len"])
     log["device_path_vec"]  = parse_efi_device_path(log["device_path"])
     return log
+
 
 def parse_efi_variable_event(buf):
     # https://docs.microsoft.com/en-us/windows-hardware/test/hlk/testref/trusted-execution-environment-efi-protocol
@@ -51,38 +59,41 @@ def parse_efi_variable_event(buf):
     log["unicode_name"]         = log["unicode_name_u16"].decode("utf-16le")
     return log
 
+
 def show_log_entry(e):
-    verbose = False
     event_type = e["event_type"]
     event_type_str = TpmEventType(event_type)
-    print()
-    print("\033[1mPCR %d -- Event %08X <%s>\033[m" % (e["pcr_idx"], event_type, event_type_str))
+    logger.verbose("\033[1mPCR %d -- Event %08X <%s>\033[m", e["pcr_idx"], event_type, event_type_str)
     event_data = e["event_data"]
     if event_type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
-        if verbose:
-            hexdump(event_data)
+        if logger.level == logging.DEBUG:
+            for i in hexdump(event_data):
+                logger.debug(i)
             ed = parse_efi_bsa_event(event_data)
-            pprint(ed)
+            logger.debug(pformat(ed))
         else:
             ed = parse_efi_bsa_event(event_data)
-            print("Path vector:")
+            logger.verbose("Path vector:")
             for p in ed["device_path_vec"]:
                 type_name = getattr(p["type"], "name", str(p["type"]))
                 subtype_name = getattr(p["subtype"], "name", str(p["subtype"]))
                 file_path = p.get("file_path", p["data"])
-                print("  * %-20s %-20s %s" % (type_name, subtype_name, file_path))
+                logger.verbose("  * %-20s %-20s %s", type_name, subtype_name, file_path)
     elif event_type in {TpmEventType.EFI_VARIABLE_AUTHORITY,
                         TpmEventType.EFI_VARIABLE_BOOT,
                         TpmEventType.EFI_VARIABLE_DRIVER_CONFIG}:
-        if verbose:
-            hexdump(event_data, 64)
+        if logger.level == logging.DEBUG:
+            for i in hexdump(event_data, 64):
+                logger.debug(i)
             ed = parse_efi_variable_event(event_data)
-            pprint(ed)
+            logger.debug(pformat(ed))
         else:
             ed = parse_efi_variable_event(event_data)
-            print("Variable: %r {%s}" % (ed["unicode_name"], ed["variable_name_uuid"]))
+            logger.verbose("Variable: %r {%s}", ed["unicode_name"], ed["variable_name_uuid"])
     else:
-        hexdump(event_data, 64)
+        for i in hexdump(event_data, 64):
+            logger.debug(i)
+
 
 # ~/src/linux/include/linux/tpm_eventlog.h
 # TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
