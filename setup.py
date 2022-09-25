@@ -1,6 +1,6 @@
 from setuptools import setup
 setup(name="tpm_futurepcr",
-      version="1.4",
+      version="1.5",
       description="Calculate future TPM PCR[4] after a kernel upgrade",
       url="https://github.com/grawity/tpm_futurepcr",
       author="Mantas Mikulėnas",
