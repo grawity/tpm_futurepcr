@@ -4,8 +4,7 @@ from pathlib import Path
 import argparse
 import re
 
-from tpm_futurepcr import to_hex, process_log, compare_pcrs, \
-    possibly_unused_bank, TpmAlgorithm
+from tpm_futurepcr import to_hex, process_log, compare_pcrs, possibly_unused_bank, TpmAlgorithm
 import tpm_futurepcr.logging as logging
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -97,11 +96,11 @@ if __name__ == "__main__":
         exit(1)
 
     # if requested, compare the pcr values and exist if different
-    if args.compare and compare_pcrs(args.hash_alg, this_pcrs, next_pcrs, args.pcr_list):
+    if args.compare and compare_pcrs(args.hash_alg.name.lower(), this_pcrs, next_pcrs, args.pcr_list):
         exit(1)
 
     # check if the contents of the first 8 PCRs might suggest something is off
-    if possibly_unused_bank(args.hash_alg, args.pcr_list, this_pcrs):
+    if possibly_unused_bank(args.hash_alg.name.lower(), args.pcr_list, this_pcrs):
         exit(1)
 
     # if requested, write the output file with the calculated values

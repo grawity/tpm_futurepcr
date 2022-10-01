@@ -87,7 +87,7 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
                     logger.verbose("this cmdline: %s", old_cmdline)
                     logger.verbose("next cmdline: %s", cmdline)
                 cmdline = loader_encode_pcr8(cmdline)
-                next_extend_value = hash_bytes(cmdline, hash_alg)
+                next_extend_value = hash_bytes(cmdline, hash_alg.name.lower())
             except FileNotFoundError:
                 # Either EFI variables, the ESP, or the .conf, are missing.
                 # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
@@ -104,7 +104,7 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
     return this_pcrs, next_pcrs, errors
 
 
-def compare_pcrs(hash_alg, this_pcrs, next_pcrs, wanted_pcrs):
+def compare_pcrs(hash_alg: str, this_pcrs: PcrBank, next_pcrs: PcrBank, wanted_pcrs: list[int]) -> bool:
     logger.info("== Real vs computed PCR values ==")
     real_pcrs = read_current_pcrs(hash_alg)
     errors = False
@@ -121,13 +121,13 @@ def compare_pcrs(hash_alg, this_pcrs, next_pcrs, wanted_pcrs):
     return errors
 
 
-def possibly_unused_bank(hash_alg, wanted_pcrs, this_pcrs):
+def possibly_unused_bank(hash_alg: str, wanted_pcrs: list[int], this_pcrs: list[int]) -> bool:
     for idx in wanted_pcrs:
         if idx <= 7 and this_pcrs.count[idx] == 0:
             # The first 8 PCRs always have an EV_SEPARATOR logged to them at the very least,
             # and the first 3 or so will almost always have other boot events. If we never saw
             # anything then the whole bank might be unused (and an all-zeros PCR value is
             # obviously unsafe to bind against).
-            logger.error("Log contains no entries for PCR %d in the %r bank.", idx, hash_alg)
+            logger.error("Log contains no entries for PCR %d in the %r bank.", idx, hash_alg.name)
             return True
     return False
