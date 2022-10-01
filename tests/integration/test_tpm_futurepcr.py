@@ -1,5 +1,8 @@
+import os
 import unittest
+from os.path import basename
 from pathlib import Path
+from unittest import skip
 from unittest.mock import patch
 import subprocess as sp
 
@@ -14,6 +17,7 @@ class TestTPM_FuturePCR(unittest.TestCase):
     def setUp(self) -> None:
         self.current_pcrs = load_current_pcrs()
 
+    @skip('')
     def test_CLI_arguments_parsing(self):
         subtests_fail = [
             "-H sha256 -L sha256:24",
@@ -41,10 +45,11 @@ class TestTPM_FuturePCR(unittest.TestCase):
                     t = sp.check_output(cmdline, encoding='utf-8')
                     self.assertTrue(t[0].startswith("ERROR:tpm_futurepcr:Log contains no entries"))
 
-    def test_replay_compare_eventlog_tpm2_BIOS_ROM(self):
+    @skip('')
+    def test_replay_compare_eventlog_tpm2_BIOS_ROM_QEMU(self):
         file_mocks = []
 
-        with open("tests/fixtures/tpm_binary_measurements", "rb") as f:
+        with open("tests/fixtures/QEMU/tpm_binary_measurements", "rb") as f:
             file_mocks.append(f.read())
 
         for i in range(24):
@@ -55,3 +60,18 @@ class TestTPM_FuturePCR(unittest.TestCase):
              patch("os.path.exists", side_effect=[True]):
             this_pcrs, next_pcrs, errors = process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), None, False)
             self.assertFalse(compare_pcrs("sha256", this_pcrs, next_pcrs, pcr_list))
+
+    def test_replay_compare_eventlog_tpm2_BIOS_ROM_ACTUAL(self):
+        tests = list(os.scandir("tests/fixtures/ACTUAL_SYSTEMS"))
+
+        file_mocks = []
+        for tst in tests:
+            with open(tst.path, "rb") as f:
+                file_mocks.append(f.read())
+
+        with patch("builtins.open", seq_mock_open(file_mocks)), \
+                patch("os.path.exists", side_effect=[True]):
+            pcr_list = [0, 1, 2, 3]
+            for tst in tests:
+                with self.subTest("Test actual log", tst=basename(tst.path)):
+                    _, _, errors = process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), None, False)
