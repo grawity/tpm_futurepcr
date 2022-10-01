@@ -1,6 +1,5 @@
 # https://github.com/tianocore/edk2/blob/master/MdePkg/Include/Protocol/DevicePath.h
-import io
-from .binary_reader import BinaryReader
+from .binary_reader import BinaryReader, ReadFormats as READFMT
 from .tpm_constants import *
 from .util import find_mountpoint_by_partuuid
 
@@ -22,9 +21,9 @@ class DevicePathItem(dict, Parseable):
         self[key] = val
 
     def parse_into(self, buf):
-        self.type       = buf.read_u8()
-        self.subtype    = buf.read_u8()
-        length          = buf.read_u16_le()
+        self.type       = buf.read(READFMT.U8)
+        self.subtype    = buf.read(READFMT.U8)
+        length          = buf.read(READFMT.U16)
         self.data       = buf.read(length - (1 + 1 + 2))
 
         self.type = DevicePathType(self.type)
@@ -64,7 +63,7 @@ class DevicePath(list, Parseable):
         return self
 
 def parse_efi_device_path(buf):
-    buf = BinaryReader(io.BytesIO(buf))
+    buf = BinaryReader(buf)
     return DevicePath.parse(buf)
 
 def device_path_to_unix_path(path_vec):

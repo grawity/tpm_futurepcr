@@ -4,7 +4,8 @@ from unittest.mock import patch
 import subprocess as sp
 
 from tests.utils import load_current_pcrs, seq_mock_open
-from tpm_futurepcr import process_log, compare_pcrs, logging, TpmAlgorithm
+from tpm_futurepcr import process_log, compare_pcrs, logging
+from tpm_futurepcr.tpm_constants import TpmAlgorithm
 
 logging.basicConfig(level=logging.VERBOSE)
 
@@ -43,7 +44,7 @@ class TestTPM_FuturePCR(unittest.TestCase):
     def test_replay_compare_eventlog_tpm2_BIOS_ROM(self):
         file_mocks = []
 
-        with open('tests/fixtures/tpm_binary_measurements', 'rb') as f:
+        with open("tests/fixtures/tpm_binary_measurements", "rb") as f:
             file_mocks.append(f.read())
 
         for i in range(24):
@@ -52,5 +53,5 @@ class TestTPM_FuturePCR(unittest.TestCase):
         pcr_list = [0, 1, 2, 3]
         with patch("builtins.open", seq_mock_open(file_mocks)), \
              patch("os.path.exists", side_effect=[True]):
-            this_pcrs, next_pcrs, errors = process_log(pcr_list, TpmAlgorithm.SHA256, Path('/unused'), None, False)
-            self.assertFalse(compare_pcrs('sha256', this_pcrs, next_pcrs, pcr_list))
+            this_pcrs, next_pcrs, errors = process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), None, False)
+            self.assertFalse(compare_pcrs("sha256", this_pcrs, next_pcrs, pcr_list))

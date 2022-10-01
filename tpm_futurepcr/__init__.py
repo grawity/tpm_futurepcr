@@ -2,13 +2,12 @@
 from pathlib import Path
 
 from .device_path import device_path_to_unix_path
-from .event_log import *
-from .pcr_bank import *
+from .event_log import enum_log_entries
+from .pcr_bank import PcrBank, read_current_pcrs
 from .systemd_boot import loader_encode_pcr8, loader_decode_pcr8, loader_get_next_cmdline
-from .tpm_constants import TpmEventType
-from .util import *
-
+from .tpm_constants import TpmEventType, TpmAlgorithm
 import tpm_futurepcr.logging as logging
+from .util import hash_pecoff, to_hex, hash_bytes
 
 logger = logging.getLogger('tpm_futurepcr')
 
@@ -20,31 +19,30 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
     last_efi_binary = None
 
     for event in enum_log_entries(log_path):
-        idx = event["pcr_idx"]
+        idx = event.pcr_idx
         if idx not in wanted_pcrs:
             continue
 
         _verbose_pcr = logger.level <= logging.VERBOSE
         if _verbose_pcr:
-            show_log_entry(event)
+            event.show()
 
         if idx == 0xFFFFFFFF:
             if _verbose_pcr:
                 logger.verbose("event updates Windows virtual PCR[-1], skipping")
             continue
 
-        this_extend_value = event["pcr_extend_values"].get(hash_alg)
-        next_extend_value = this_extend_value
-
-        if this_extend_value is None:
+        try:
+            this_extend_value = event.pcr_extend_values[hash_alg]
+        except KeyError:
             if _verbose_pcr:
                 logger.verbose("event does not update the specified PCR bank, skipping")
             continue
+        next_extend_value = this_extend_value
 
-        if event["event_type"] == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
-            event_data = parse_efi_bsa_event(event["event_data"])
+        if event.type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
             try:
-                unix_path = device_path_to_unix_path(event_data["device_path_vec"])
+                unix_path = device_path_to_unix_path(event.data.device_path_vec)
                 if substitute_bsa_unix_path:
                     unix_path = substitute_bsa_unix_path.get(unix_path, unix_path)
             except Exception as e:
@@ -73,11 +71,11 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
 
         # Handle systemd EFI stub "kernel command line" measurements (found in
         # PCR 8 up to systemd v250, but PCR 12 afterwards).
-        if event["event_type"] == TpmEventType.IPL and (idx in wanted_pcrs):
+        if event.type == TpmEventType.IPL and (idx in wanted_pcrs):
             try:
                 cmdline = loader_get_next_cmdline(last_efi_binary)
                 if logger.level <= logging.VERBOSE:
-                    old_cmdline = event["event_data"]
+                    old_cmdline = event.data
                     # 2022-03-19 grawity: In the past, we had to strip away the last \0 byte for
                     # some reason (which I don't remember)... but apparently now we don't? Let's
                     # add a warning so that hopefully I remember why it was necessary.
@@ -95,15 +93,13 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
                 # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
                 logger.verbose("-- not touching non-systemd IPL event --")
 
-        if event["event_type"] != TpmEventType.NO_ACTION:
+        if event.type != TpmEventType.NO_ACTION:
             this_pcrs.extend_with_hash(idx, this_extend_value)
             next_pcrs.extend_with_hash(idx, next_extend_value)
 
         if _verbose_pcr:
-            logger.verbose("--> after this event, PCR %d contains value %s" % (
-            idx, to_hex(this_pcrs[idx])))
-            logger.verbose("--> after reboot, PCR %d will contain value %s" % (
-            idx, to_hex(next_pcrs[idx])))
+            logger.verbose("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
+            logger.verbose("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
 
     return this_pcrs, next_pcrs, errors
 
