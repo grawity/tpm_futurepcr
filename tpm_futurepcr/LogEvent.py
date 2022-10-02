@@ -44,8 +44,8 @@ class LogEvent:
             log = dict()
             log["variable_name_guid"] = fh.read(16)
             log["variable_name_uuid"] = guid_to_UUID(log["variable_name_guid"])
-            log["unicode_name_len"] = fh.read(f'{READFMT.U64}')
-            log["variable_data_len"] = fh.read(f'{READFMT.U64}')
+            log["unicode_name_len"] = fh.read(READFMT.U64)
+            log["variable_data_len"] = fh.read(READFMT.U64)
             log["unicode_name_u16"] = fh.read(log["unicode_name_len"] * 2)
             log["variable_data"] = fh.read(log["variable_data_len"])
             log["unicode_name"] = log["unicode_name_u16"].decode("utf-16le")
@@ -126,10 +126,10 @@ class LogEvent:
         # same across both formats
         event_size = binary_reader.read(READFMT.U32)
         if self.type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
-            image_location = binary_reader.read(f'{READFMT.PTR}')     # EFI_PHYSICAL_ADDRESS (pointer)
-            image_length = binary_reader.read(f'{READFMT.SIZE}')      # UINTN (u64/u32 depending on arch)
-            image_lt_address = binary_reader.read(f'{READFMT.SIZE}')  # UINTN
-            device_path_len = binary_reader.read(f'{READFMT.SIZE}')   # UINTN
+            image_location = binary_reader.read(READFMT.PTR)     # EFI_PHYSICAL_ADDRESS (pointer)
+            image_length = binary_reader.read(READFMT.SIZE)      # UINTN (u64/u32 depending on arch)
+            image_lt_address = binary_reader.read(READFMT.SIZE)  # UINTN
+            device_path_len = binary_reader.read(READFMT.SIZE)   # UINTN
             device_path_vec = parse_efi_device_path(binary_reader.read(device_path_len))
             self.data = EFIBSAData(image_location, image_length, image_lt_address, device_path_vec)
         else:
