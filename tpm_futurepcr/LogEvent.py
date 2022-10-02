@@ -75,7 +75,7 @@ class LogEvent:
         return log
 
     def show(self):
-        logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type)
+        logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
         if self.type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
             if logger.level == logging.DEBUG:
                 for i in hexdump(self.data):

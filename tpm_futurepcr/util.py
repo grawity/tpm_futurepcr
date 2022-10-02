@@ -1,6 +1,7 @@
 import hashlib
 import os
-import subprocess
+import subprocess as sp
+import uuid
 from pathlib import Path
 
 import signify.fingerprinter
@@ -137,9 +138,6 @@ def in_path(exe):
     return False
 
 
-def find_mountpoint_by_partuuid(partuuid):
-    res = subprocess.run(["findmnt", "-S", "PARTUUID=" + str(partuuid).lower(),
-                                     "-o", "TARGET", "-r", "-n"],
-                         stdout=subprocess.PIPE)
-    res.check_returncode()
-    return res.stdout.splitlines()[0].decode()
+def find_mountpoint_by_partuuid(partuuid: uuid.UUID) -> Path:
+    res = sp.check_output(f"findmnt -S PARTUUID={str(partuuid).lower()} -o TARGET -r -n".split())
+    return Path(res.split(maxsplit=1)[0].decode())

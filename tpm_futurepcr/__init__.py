@@ -18,9 +18,14 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
     errors = False
     last_efi_binary = None
 
+    required_pcrs = set(wanted_pcrs)
+    if 12 in required_pcrs:
+        logger.verbose('Although not requested, PCR 4 is a dependency for PCR 12')
+        required_pcrs.add(4)
+
     for event in enum_log_entries(log_path):
         idx = event.pcr_idx
-        if idx not in wanted_pcrs:
+        if idx not in required_pcrs:
             continue
 
         _verbose_pcr = logger.level <= logging.VERBOSE
@@ -51,13 +56,15 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
                 unix_path = None
 
             if unix_path:
-                file_hash = hash_pecoff(unix_path, hash_alg)
-                next_extend_value = file_hash
+                try:
+                    next_extend_value = hash_pecoff(unix_path, hash_alg)
+                except FileNotFoundError:
+                    logger.info("File %s could not be opened. Continuing with the log-provided extend value", unix_path)
                 last_efi_binary = unix_path
                 if _verbose_pcr:
                     logger.verbose("-- extending with coff hash --")
                     logger.verbose("file path = %s", unix_path)
-                    logger.verbose("file hash = %s", to_hex(file_hash))
+                    logger.verbose("file hash = %s", to_hex(next_extend_value))
                     logger.verbose("this event extend value = %s", to_hex(this_extend_value))
                     logger.verbose("guessed extend value = %s", to_hex(next_extend_value))
             else:

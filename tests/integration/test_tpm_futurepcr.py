@@ -2,7 +2,6 @@ import os
 import unittest
 from os.path import basename
 from pathlib import Path
-from unittest import skip
 from unittest.mock import patch
 import subprocess as sp
 
@@ -11,11 +10,10 @@ from tpm_futurepcr import process_log, compare_pcrs, logging
 from tpm_futurepcr.LogEvent import LogEvent
 from tpm_futurepcr.tpm_constants import TpmAlgorithm
 
-logging.basicConfig(level=logging.VERBOSE)
-
 
 class TestTPM_FuturePCR(unittest.TestCase):
     def setUp(self) -> None:
+        logging.basicConfig(level=logging.VERBOSE)
         self.current_pcrs = load_current_pcrs()
 
     def tearDown(self) -> None:
@@ -81,3 +79,17 @@ class TestTPM_FuturePCR(unittest.TestCase):
                 with self.subTest("Test actual log", tst=basename(tst.name)):
                     _, _, errors = process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), None, False)
                 self.tearDown()
+
+    def test_replay_eventlog_tpm2_PCR12_ROM_ACTUAL(self):
+        logging.basicConfig(level=logging.DEBUG)
+        file_mocks = []
+        with open("tests/fixtures/ACTUAL_SYSTEMS/Dell_Optiplex_TPM2.0_UEFI_NonSB_Linux.log", "rb") as f:
+            file_mocks.append(f.read())
+        file_mocks.extend([FileNotFoundError, FileNotFoundError])
+
+        with patch("builtins.open", seq_mock_open(file_mocks)), \
+             patch("os.path.exists", side_effect=[True]), \
+             patch("tpm_futurepcr.device_path.find_mountpoint_by_partuuid", side_effect=['/', '/']), \
+             patch("tpm_futurepcr.loader_get_next_cmdline", side_effect=[r'initrd=\intel-ucode.img initrd=\initramfs-linux.img rd.luks.name=0154ed05-bf69-4f1c-b74a-46f05048d78e=sys root=/dev/mapper/sys rw audit=0 i915.fastboot=1 net.ifnames=0']):
+            pcr_list = [12]
+            _, _, errors = process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), None, False)
