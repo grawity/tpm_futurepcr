@@ -119,7 +119,8 @@ class LogEvent:
                 # Spec says it should be safe to just iter over hdr[digest_sizes],
                 # as all entries must have the same algorithms in the same order,
                 # but it does recommend alg_id lookup as the preferred method.
-                alg_id = TpmAlgorithm(binary_reader.read(READFMT.U16))
+                _alg = binary_reader.read(READFMT.U16)
+                alg_id = TpmAlgorithm(_alg)
                 self.pcr_extend_values[alg_id] = binary_reader.read(self.tcg_hdr["digest_sizes_dict"][alg_id])
 
         # same across both formats

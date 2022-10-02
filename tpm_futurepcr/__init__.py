@@ -128,6 +128,6 @@ def possibly_unused_bank(hash_alg: str, wanted_pcrs: list[int], this_pcrs: list[
             # and the first 3 or so will almost always have other boot events. If we never saw
             # anything then the whole bank might be unused (and an all-zeros PCR value is
             # obviously unsafe to bind against).
-            logger.error("Log contains no entries for PCR %d in the %r bank.", idx, hash_alg.name)
+            logger.error("Log contains no entries for PCR %d in the %r bank.", idx, hash_alg)
             return True
     return False

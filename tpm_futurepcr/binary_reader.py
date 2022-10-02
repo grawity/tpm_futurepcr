@@ -25,7 +25,7 @@ class BinaryReader:
     def read(self, fmt_len: str | int) -> bytes | int | tuple | None:
         length = fmt_len if isinstance(fmt_len, int) else struct.calcsize("<"+fmt_len)
         if length == 0:
-            return
+            return b''
         buf = self.fh.read(length)
 
         if len(buf) == 0:
