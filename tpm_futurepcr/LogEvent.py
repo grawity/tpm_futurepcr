@@ -23,6 +23,9 @@ class EFIBSAData:
     image_lt_address: int
     device_path_vec: list[Any]
 
+    def __str__(self):
+        return self.__dict__.copy()
+
 
 @dataclass
 class LogEvent:
@@ -77,12 +80,11 @@ class LogEvent:
             if logger.level == logging.DEBUG:
                 for i in hexdump(self.data):
                     logger.debug(i)
-                ed = self.parse_efi_bsa_event(self.data)
+                ed = str(self.data)
                 logger.debug(pformat(ed))
             else:
-                ed = self.parse_efi_bsa_event(self.data)
                 logger.verbose("Path vector:")
-                for p in ed.device_path_vec:
+                for p in self.data.device_path_vec:
                     type_name = getattr(p["type"], "name", str(p["type"]))
                     subtype_name = getattr(p["subtype"], "name", str(p["subtype"]))
                     file_path = p.get("file_path", p["data"])
