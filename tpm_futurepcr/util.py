@@ -6,7 +6,7 @@ from pathlib import Path
 
 import signify.fingerprinter
 
-from .binary_reader import ReadFormats as READFMT, BinaryReader
+from .binary_reader import BinaryReader
 
 import tpm_futurepcr.logging as logging
 
@@ -81,34 +81,34 @@ def read_pecoff_section(path: Path, section: bytes):
         dos_stub = br.read(0x3c)
         if dos_stub[0:2] != b"MZ":
             raise ValueError("File does not start with MS-DOS MZ magic")
-        pe_offset = br.read(READFMT.U16)
+        pe_offset = br.read_u16()
         br.seek(pe_offset)
         pe_sig = br.read(4)
         if pe_sig != b"PE\0\0":
             raise ValueError("File does not contain PE signature")
         # COFF header
-        target_machine = br.read(READFMT.U16)
-        num_sections = br.read(READFMT.U16)
-        time_date = br.read(READFMT.U32)
-        symtab_offset = br.read(READFMT.U32)
-        num_symbols = br.read(READFMT.U32)
-        opthdr_size = br.read(READFMT.U16)
-        characteristics = br.read(READFMT.U16)
+        target_machine = br.read_u16()
+        num_sections = br.read_u16()
+        time_date = br.read_u32()
+        symtab_offset = br.read_u32()
+        num_symbols = br.read_u32()
+        opthdr_size = br.read_u16()
+        characteristics = br.read_u16()
         # Optional PE32 Header
         if opthdr_size:
             br.seek(opthdr_size)
         # Section table
         for i in range(num_sections):
             section_name = br.read(8).rstrip(b"\0")
-            virtual_size = br.read(READFMT.U32)
-            virtual_addr = br.read(READFMT.U32)
-            section_size = br.read(READFMT.U32)
-            section_offset = br.read(READFMT.U32)
-            relocs_offset = br.read(READFMT.U32)
-            linenums_offset = br.read(READFMT.U32)
-            num_relocs = br.read(READFMT.U16)
-            num_linenums = br.read(READFMT.U16)
-            characteristics = br.read(READFMT.U32)
+            virtual_size = br.read_u32()
+            virtual_addr = br.read_u32()
+            section_size = br.read_u32()
+            section_offset = br.read_u32()
+            relocs_offset = br.read_u32()
+            linenums_offset = br.read_u32()
+            num_relocs = br.read_u16()
+            num_linenums = br.read_u16()
+            characteristics = br.read_u32()
             if section_name == want_section:
                 found_size = min(section_size, virtual_size)
                 found_offset = section_offset

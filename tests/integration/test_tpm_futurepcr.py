@@ -7,7 +7,6 @@ import subprocess as sp
 
 from tests.utils import load_current_pcrs, seq_mock_open
 from tpm_futurepcr import process_log, compare_pcrs, logging
-from tpm_futurepcr.LogEvent import LogEvent
 from tpm_futurepcr.tpm_constants import TpmAlgorithm
 
 
@@ -15,12 +14,6 @@ class TestTPM_FuturePCR(unittest.TestCase):
     def setUp(self) -> None:
         logging.basicConfig(level=logging.VERBOSE)
         self.current_pcrs = load_current_pcrs()
-
-    def tearDown(self) -> None:
-        # the tpm_version needs to be reset to 1 after each test, which would naturally
-        # happen in the case of sequential script runs, but not in this case (as we are
-        # processing multiple event logs at once
-        LogEvent.tpm_version = 1
 
     def test_CLI_arguments_parsing(self):
         subtests_fail = [
@@ -78,7 +71,6 @@ class TestTPM_FuturePCR(unittest.TestCase):
             for tst in tests:
                 with self.subTest("Test actual log", tst=basename(tst.name)):
                     _, _, errors = process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), None, False)
-                self.tearDown()
 
     def test_replay_eventlog_tpm2_PCR12_ROM_ACTUAL(self):
         logging.basicConfig(level=logging.DEBUG)
