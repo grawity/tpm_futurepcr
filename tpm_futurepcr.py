@@ -4,8 +4,7 @@ from pathlib import Path
 import argparse
 import re
 
-from tpm_futurepcr import to_hex, process_log, compare_pcrs, \
-    possibly_unused_bank, TpmAlgorithm
+from tpm_futurepcr import to_hex, process_log, compare_pcrs, possibly_unused_bank, TpmAlgorithm
 import tpm_futurepcr.logging as logging
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -22,16 +21,16 @@ def validate_pcrlist(pcr_list: str) -> tuple[list[int], str | None]:
 
     pcrs_parsed = re.match(rf'((?P<alg>\w+):)?(?P<pcrs>[\d,]+)', pcr_list)
     if pcrs_parsed is None:
-        raise argparse.ArgumentTypeError('PCR specifier must have format "<algorithm>:<num>,<num>,..."')
+        raise argparse.ArgumentTypeError("PCR specifier must have format '<algorithm>:<num>,<num>,...'")
 
-    hash_alg = pcrs_parsed.group('alg')
-    pcr_list = list(set(map(int, pcrs_parsed.group('pcrs').split(","))))
+    hash_alg = pcrs_parsed.group("alg")
+    pcr_list = list(set(map(int, pcrs_parsed.group("pcrs").split(","))))
 
     if not all(x < _PCRS_MAX_NUM for x in pcr_list):
-        raise argparse.ArgumentTypeError(f'Max index for PCR is {_PCRS_MAX_NUM-1}')
+        raise argparse.ArgumentTypeError(f"Max index for PCR is {_PCRS_MAX_NUM-1}")
 
     if hash_alg is not None and hash_alg not in _HASH_ALG_CHOICES:
-        raise argparse.ArgumentTypeError(f'Hash algorithm choices are {",".join(_HASH_ALG_CHOICES)}')
+        raise argparse.ArgumentTypeError(f"Hash algorithm choices are {','.join(_HASH_ALG_CHOICES)}")
 
     return pcr_list, hash_alg
 
@@ -57,7 +56,7 @@ def postprocess_args(args: argparse.Namespace) -> argparse.Namespace:
     if (args.hash_alg is None and args.pcr_list[1] is None) or \
        (args.hash_alg is not None and args.pcr_list[1] is not None and args.hash_alg != args.pcr_list[1]):
         parser.print_usage()
-        print('tpm_futurepcr.py: error: argument -H/--hash-alg: if specified in multiple places, hash algorithm value must be the same in all of them.')
+        print("tpm_futurepcr.py: error: argument -H/--hash-alg: if specified in multiple places, hash algorithm value must be the same in all of them.")
         sys.exit(2)
 
     # populate properly the hash_alg argument
@@ -82,9 +81,9 @@ if __name__ == "__main__":
     parser.add_argument("--log-path", type=Path, help="read binary log from an alternative path")
 
     # TODO: instead of having -v and -d, maybe enable -vv?
-    parser.add_argument('-d', '--debug', help="Print lots of debugging statements", action="store_const",
+    parser.add_argument("-d", "--debug", help="Print lots of debugging statements", action="store_const",
                         dest="loglevel", const=logging.DEBUG, default=logging.INFO)
-    parser.add_argument('-v', '--verbose', help="Be verbose", action="store_const", dest="loglevel",
+    parser.add_argument("-v", "--verbose", help="Be verbose", action="store_const", dest="loglevel",
                         const=logging.VERBOSE)
 
     # post-process CLI arguments
@@ -97,11 +96,11 @@ if __name__ == "__main__":
         exit(1)
 
     # if requested, compare the pcr values and exist if different
-    if args.compare and compare_pcrs(args.hash_alg, this_pcrs, next_pcrs, args.pcr_list):
+    if args.compare and compare_pcrs(args.hash_alg.name.lower(), this_pcrs, next_pcrs, args.pcr_list):
         exit(1)
 
     # check if the contents of the first 8 PCRs might suggest something is off
-    if possibly_unused_bank(args.hash_alg, args.pcr_list, this_pcrs):
+    if possibly_unused_bank(args.hash_alg.name.lower(), args.pcr_list, this_pcrs):
         exit(1)
 
     # if requested, write the output file with the calculated values

@@ -1,8 +1,12 @@
 import hashlib
 import os
-import signify.fingerprinter
-import subprocess
+import subprocess as sp
+import uuid
+from pathlib import Path
 
+import signify.fingerprinter
+
+from .binary_reader import BinaryReader
 
 import tpm_futurepcr.logging as logging
 
@@ -67,45 +71,44 @@ def hash_pecoff(path, alg="sha1"):
     return None
 
 
-def read_pecoff_section(path, section):
-    from .binary_reader import BinaryReader
+def read_pecoff_section(path: Path, section: bytes):
     want_section = section.encode()
     found_size = None
     found_offset = None
-    with open(path, "rb") as fh:
-        br = BinaryReader(fh)
+    with BinaryReader(path) as br:
+
         # MS-DOS stub
         dos_stub = br.read(0x3c)
         if dos_stub[0:2] != b"MZ":
             raise ValueError("File does not start with MS-DOS MZ magic")
-        pe_offset = br.read_u16_le()
+        pe_offset = br.read_u16()
         br.seek(pe_offset)
         pe_sig = br.read(4)
         if pe_sig != b"PE\0\0":
             raise ValueError("File does not contain PE signature")
         # COFF header
-        target_machine = br.read_u16_le()
-        num_sections = br.read_u16_le()
-        time_date = br.read_u32_le()
-        symtab_offset = br.read_u32_le()
-        num_symbols = br.read_u32_le()
-        opthdr_size = br.read_u16_le()
-        characteristics = br.read_u16_le()
+        target_machine = br.read_u16()
+        num_sections = br.read_u16()
+        time_date = br.read_u32()
+        symtab_offset = br.read_u32()
+        num_symbols = br.read_u32()
+        opthdr_size = br.read_u16()
+        characteristics = br.read_u16()
         # Optional PE32 Header
         if opthdr_size:
-            _ = br.read(opthdr_size)
+            br.seek(opthdr_size)
         # Section table
         for i in range(num_sections):
             section_name = br.read(8).rstrip(b"\0")
-            virtual_size = br.read_u32_le()
-            virtual_addr = br.read_u32_le()
-            section_size = br.read_u32_le()
-            section_offset = br.read_u32_le()
-            relocs_offset = br.read_u32_le()
-            linenums_offset = br.read_u32_le()
-            num_relocs = br.read_u16_le()
-            num_linenums = br.read_u16_le()
-            characteristics = br.read_u32_le()
+            virtual_size = br.read_u32()
+            virtual_addr = br.read_u32()
+            section_size = br.read_u32()
+            section_offset = br.read_u32()
+            relocs_offset = br.read_u32()
+            linenums_offset = br.read_u32()
+            num_relocs = br.read_u16()
+            num_linenums = br.read_u16()
+            characteristics = br.read_u32()
             if section_name == want_section:
                 found_size = min(section_size, virtual_size)
                 found_offset = section_offset
@@ -135,9 +138,6 @@ def in_path(exe):
     return False
 
 
-def find_mountpoint_by_partuuid(partuuid):
-    res = subprocess.run(["findmnt", "-S", "PARTUUID=" + str(partuuid).lower(),
-                                     "-o", "TARGET", "-r", "-n"],
-                         stdout=subprocess.PIPE)
-    res.check_returncode()
-    return res.stdout.splitlines()[0].decode()
+def find_mountpoint_by_partuuid(partuuid: uuid.UUID) -> Path:
+    res = sp.check_output(f"findmnt -S PARTUUID={str(partuuid).lower()} -o TARGET -r -n".split())
+    return Path(res.split(maxsplit=1)[0].decode())

@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+
 from .util import (
     find_mountpoint_by_partuuid,
     read_efi_variable,
@@ -65,7 +67,7 @@ def sd_stub_get_cmdline(path):
         cmdline = cmdline[:-1]
     return cmdline
 
-def loader_get_next_cmdline(last_efi_binary=None):
+def loader_get_next_cmdline(last_efi_binary: Path=None) -> str:
     try:
         sd_stub_present = read_efi_variable("StubInfo", EFIVAR_GUID_REDHAT)
     except FileNotFoundError:

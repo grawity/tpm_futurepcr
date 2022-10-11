@@ -1,0 +1,111 @@
+from dataclasses import dataclass, InitVar, field
+import dataclasses
+from pprint import pformat
+from typing import Any
+
+from .device_path import parse_efi_device_path
+from .tpm_constants import TpmEventType, TpmAlgorithm
+from . import logging
+from .util import hexdump, guid_to_UUID
+from .binary_reader import BinaryReader
+
+logger = logging.getLogger('log_event')
+
+# Reference
+# ~/src/linux/include/linux/tpm_eventlog.h
+# TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
+# TPMv2: https://trustedcomputinggroup.org/wp-content/uploads/EFI-Protocol-Specification-rev13-160330final.pdf
+
+
+@dataclass(frozen=True)
+class EFIBSAData:
+    image_location: int
+    image_length: int
+    image_lt_address: int
+    device_path_vec: list[Any]
+
+
+@dataclass
+class LogEvent:
+    binary_reader: InitVar[BinaryReader]
+    tpm_version: InitVar[int]
+    tcg_hdr: InitVar[dict | None]
+    pcr_idx: int = field(init=False)
+    type: TpmEventType = field(init=False)
+    pcr_extend_values: dict[TpmAlgorithm, bytes] = field(init=False)
+    data: bytes | EFIBSAData = field(init=False)
+
+    @staticmethod
+    def _parse_efi_variable_event(data):
+        # https://docs.microsoft.com/en-us/windows-hardware/test/hlk/testref/trusted-execution-environment-efi-protocol
+        with BinaryReader(data) as fh:
+            log = dict()
+            log["variable_name_guid"] = fh.read(16)
+            log["variable_name_uuid"] = guid_to_UUID(log["variable_name_guid"])
+            log["unicode_name_len"] = fh.read_u64()
+            log["variable_data_len"] = fh.read_u64()
+            log["unicode_name_u16"] = fh.read(log["unicode_name_len"] * 2)
+            log["variable_data"] = fh.read(log["variable_data_len"])
+            log["unicode_name"] = log["unicode_name_u16"].decode("utf-16le")
+        return log
+
+    def show(self):
+        logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
+        if self.type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
+            if logger.level == logging.DEBUG:
+                for i in hexdump(self.data):
+                    logger.debug(i)
+                ed = dataclasses.asdict(self.data)
+                logger.debug(pformat(ed))
+            else:
+                logger.verbose("Path vector:")
+                for p in self.data.device_path_vec:
+                    type_name = getattr(p["type"], "name", str(p["type"]))
+                    subtype_name = getattr(p["subtype"], "name", str(p["subtype"]))
+                    file_path = p.get("file_path", p["data"])
+                    logger.verbose("  * %-20s %-20s %s", type_name, subtype_name, file_path)
+        elif self.type in {TpmEventType.EFI_VARIABLE_AUTHORITY,
+                            TpmEventType.EFI_VARIABLE_BOOT,
+                            TpmEventType.EFI_VARIABLE_DRIVER_CONFIG}:
+            if logger.level == logging.DEBUG:
+                for i in hexdump(self.data, 64):
+                    logger.debug(i)
+                ed = self._parse_efi_variable_event(self.data)
+                logger.debug(pformat(ed))
+            else:
+                ed = self._parse_efi_variable_event(self.data)
+                logger.verbose("Variable: %r {%s}", ed["unicode_name"], ed["variable_name_uuid"])
+        else:
+            for i in hexdump(self.data, 64):
+                logger.debug(i)
+
+    def __post_init__(self, binary_reader, tpm_version, tcg_hdr):
+        self.pcr_idx = binary_reader.read_u32()
+        self.type = TpmEventType(binary_reader.read_u32())
+        self.pcr_extend_values = dict()
+        # same across both formats
+        if tpm_version == 1:
+            # section 5.1, SHA1 Event Log Entry Format
+            self.pcr_extend_values[TpmAlgorithm.SHA1] = binary_reader.read(20)
+        elif tpm_version == 2:
+            # section 5.2, Crypto Agile Log Entry Format
+            pcr_count = binary_reader.read_u32()
+            for i in range(pcr_count):
+                # Spec says it should be safe to just iter over hdr[digest_sizes],
+                # as all entries must have the same algorithms in the same order,
+                # but it does recommend alg_id lookup as the preferred method.
+                _alg = binary_reader.read_u16()
+                alg_id = TpmAlgorithm(_alg)
+                self.pcr_extend_values[alg_id] = binary_reader.read(tcg_hdr["digest_sizes_dict"][alg_id])
+
+        # same across both formats
+        event_size = binary_reader.read_u32()
+        if self.type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
+            image_location = binary_reader.read_ptr()     # EFI_PHYSICAL_ADDRESS (pointer)
+            image_length = binary_reader.read_size()      # UINTN (u64/u32 depending on arch)
+            image_lt_address = binary_reader.read_size()  # UINTN
+            device_path_len = binary_reader.read_size()   # UINTN
+            device_path_vec = parse_efi_device_path(binary_reader.read(device_path_len))
+            self.data = EFIBSAData(image_location, image_length, image_lt_address, device_path_vec)
+        else:
+            self.data = binary_reader.read(event_size)

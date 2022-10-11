@@ -1,5 +1,6 @@
 # https://github.com/tianocore/edk2/blob/master/MdePkg/Include/Protocol/DevicePath.h
-import io
+from pathlib import Path
+
 from .binary_reader import BinaryReader
 from .tpm_constants import *
 from .util import find_mountpoint_by_partuuid
@@ -24,7 +25,7 @@ class DevicePathItem(dict, Parseable):
     def parse_into(self, buf):
         self.type       = buf.read_u8()
         self.subtype    = buf.read_u8()
-        length          = buf.read_u16_le()
+        length          = buf.read_u16()
         self.data       = buf.read(length - (1 + 1 + 2))
 
         self.type = DevicePathType(self.type)
@@ -46,7 +47,7 @@ class DevicePathItem(dict, Parseable):
                 self.part_uuid = uuid.UUID(bytes_le=self.data[20:20+16])
 
             elif self.subtype == MediaDevicePathSubtype.FilePath:
-                self.file_path = self.data.decode("utf-16le")
+                self.file_path = self.data.decode("utf-16le").replace("\\", "/").rstrip("\0")
 
         elif self.type == DevicePathType.BIOSBootDevice:
             self.subtype = BiosBootDevicePathSubtype(self.subtype)
@@ -64,10 +65,11 @@ class DevicePath(list, Parseable):
         return self
 
 def parse_efi_device_path(buf):
-    buf = BinaryReader(io.BytesIO(buf))
+    buf = BinaryReader(buf)
     return DevicePath.parse(buf)
 
-def device_path_to_unix_path(path_vec):
+
+def device_path_to_unix_path(path_vec) -> Path | None:
     dir_path = None
     unix_path = None
     for pp in path_vec:
@@ -77,8 +79,7 @@ def device_path_to_unix_path(path_vec):
                 if not dir_path:
                     raise Exception("could not find mountpoint for partuuid %r" % pp.part_uuid)
             if pp.subtype == MediaDevicePathSubtype.FilePath:
-                file_path = pp.file_path
-                unix_path = dir_path + file_path.replace("\\", "/").rstrip("\0")
+                unix_path = dir_path / Path(pp.file_path)
         if pp.type == DevicePathType.End:
             break
     return unix_path
