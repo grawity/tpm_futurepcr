@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Iterator
 
 from .tpm_constants import TpmEventType, TpmAlgorithm
-from .LogEvent import LogEvent
+from .LogEvent import logEventFactory, BaseEvent
 from .binary_reader import BinaryReader
 import tpm_futurepcr.logging as logging
 
@@ -32,14 +32,14 @@ def _parse_efi_tcg2_header_event(data):
     return log
 
 
-def enum_log_entries(path: Path = Path("/sys/kernel/security/tpm0/binary_bios_measurements")) -> Iterator[LogEvent]:
+def enum_log_entries(substitute_bsa_unix_path: dict, allow_unexpected_bsa: bool, path: Path = Path("/sys/kernel/security/tpm0/binary_bios_measurements")) -> Iterator[BaseEvent]:
     tpm_version = 1
     tcg_hdr = None
 
     with BinaryReader(path) as fh:
         while True:
             try:
-                t = LogEvent(fh, tpm_version, tcg_hdr)
+                t = logEventFactory(fh, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa)
                 if tpm_version == 1 and t.pcr_idx == 0 and \
                    t.type == TpmEventType.NO_ACTION and t.data[:15] == b"Spec ID Event03":
                     tpm_version = 2
@@ -47,5 +47,3 @@ def enum_log_entries(path: Path = Path("/sys/kernel/security/tpm0/binary_bios_me
                 yield t
             except EOFError:
                 break
-
-

@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("-H", "--hash-alg", help="specify the hash algorithm", choices=_HASH_ALG_CHOICES)
     parser.add_argument("-o", "--output", type=Path, help="write binary PCR values to specified file")
     parser.add_argument("--allow-unexpected-bsa", action="store_true", help="accept BOOT_SERVICES_APPLICATION events with weird paths")
-    parser.add_argument("--substitute-bsa-unix-path", action=KeyValueAction, help="substitute BOOT_SERVICES_APPLICATION path (syntax: <computed unix path>=<new unix path>)")
+    parser.add_argument("--substitute-bsa-unix-path", action=KeyValueAction, default=dict(), help="substitute BOOT_SERVICES_APPLICATION path (syntax: <computed unix path>=<new unix path>)")
     parser.add_argument("--compare", action="store_true", help="compare computed PCRs against live values")
     parser.add_argument("--log-path", type=Path, help="read binary log from an alternative path")
 
@@ -90,9 +90,10 @@ if __name__ == "__main__":
     args = postprocess_args(parser.parse_args())
 
     # process the event log
-    this_pcrs, next_pcrs, errors = process_log(args.pcr_list, args.hash_alg, args.log_path, args.substitute_bsa_unix_path, args.allow_unexpected_bsa)
-    if errors:
-        logger.error("fatal errors occured")
+    try:
+        this_pcrs, next_pcrs = process_log(args.pcr_list, args.hash_alg, args.log_path, args.substitute_bsa_unix_path, args.allow_unexpected_bsa)
+    except ValueError:
+        logger.error('Because of previous exceptions, the program is terminating')
         exit(1)
 
     # if requested, compare the pcr values and exist if different

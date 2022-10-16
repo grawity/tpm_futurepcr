@@ -4,8 +4,6 @@ import subprocess as sp
 import uuid
 from pathlib import Path
 
-import signify.fingerprinter
-
 from .binary_reader import BinaryReader
 
 import tpm_futurepcr.logging as logging
@@ -61,14 +59,6 @@ def hash_file(path, alg="sha1"):
             buf = fh.read(buf_size)
             h.update(buf)
     return h.digest()
-
-
-def hash_pecoff(path, alg="sha1"):
-    with open(path, "rb") as fh:
-        fpr = signify.fingerprinter.AuthenticodeFingerprinter(fh)
-        fpr.add_authenticode_hashers(getattr(hashlib, alg))
-        return fpr.hash()[alg]
-    return None
 
 
 def read_pecoff_section(path: Path, section: bytes):
