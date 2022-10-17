@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Iterator
 
 from .tpm_constants import TpmEventType, TpmAlgorithm
-from .LogEvent import logEventFactory, BaseEvent
+from .LogEvent import LogEventFactory, BaseEvent, EFIBSAEventException
 from .binary_reader import BinaryReader
 import tpm_futurepcr.logging as logging
 
@@ -39,7 +39,12 @@ def enum_log_entries(substitute_bsa_unix_path: dict, allow_unexpected_bsa: bool,
     with BinaryReader(path) as fh:
         while True:
             try:
-                t = logEventFactory(fh, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa)
+                try:
+                    t = LogEventFactory(fh, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa)
+                except EFIBSAEventException as _exc:
+                    logger.warning("Error processing EFIBSAEvent (%s). This event will be ignored", str(_exc))
+                    continue
+
                 if tpm_version == 1 and t.pcr_idx == 0 and \
                    t.type == TpmEventType.NO_ACTION and t.data[:15] == b"Spec ID Event03":
                     tpm_version = 2

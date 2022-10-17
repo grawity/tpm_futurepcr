@@ -6,7 +6,7 @@ from pathlib import Path
 from pprint import pformat
 from typing import Any
 
-import signify
+from signify.fingerprinter import AuthenticodeFingerprinter
 
 from .device_path import parse_efi_device_path
 from .tpm_constants import TpmEventType, TpmAlgorithm, DevicePathType, MediaDevicePathSubtype
@@ -56,6 +56,10 @@ class BaseEvent(ABC):
 
     @abstractmethod
     def next_extend_value(self, current_extend_value: bytes, hash_alg: str = "sha1") -> bytes:
+        pass
+
+    @abstractmethod
+    def show(self):
         pass
 
 
@@ -112,6 +116,10 @@ class _EFIBSAData:
     device_path_vec: list[Any]
 
 
+class EFIBSAEventException(Exception):
+    pass
+
+
 @dataclass
 class EFIBSAEvent(BaseEvent):
     substitute_bsa_unix_path: dict
@@ -147,7 +155,6 @@ class EFIBSAEvent(BaseEvent):
 
     def _device_path_to_unix_path(self) -> Path | None:
         dir_path = None
-        unix_path = None
         for pp in self.data.device_path_vec:
             if pp.type == DevicePathType.MediaDevice:
                 if pp.subtype == MediaDevicePathSubtype.HardDrive:
@@ -155,10 +162,14 @@ class EFIBSAEvent(BaseEvent):
                     if not dir_path:
                         raise Exception("could not find mountpoint for partuuid %r" % pp.part_uuid)
                 if pp.subtype == MediaDevicePathSubtype.FilePath:
-                    unix_path = dir_path / Path(pp.file_path)
+                    try:
+                        return dir_path / Path(pp.file_path)
+                    except TypeError:
+                        raise EFIBSAEventException('dir_path could not be found for an EFIBSA event.')
             if pp.type == DevicePathType.End:
                 break
-        return unix_path
+        else:
+            raise EFIBSAEventException('Full path to HardDrive/FilePath could not be determined.')
 
     def show(self):
         if logger.level == logging.DEBUG:
@@ -177,7 +188,7 @@ class EFIBSAEvent(BaseEvent):
     def _hash_pecoff(self, hash_alg="sha1"):
         try:
             with open(self.unix_path, "rb") as fh:
-                fpr = signify.fingerprinter.AuthenticodeFingerprinter(fh)
+                fpr = AuthenticodeFingerprinter(fh)
                 fpr.add_authenticode_hashers(getattr(hashlib, hash_alg))
                 return fpr.hash()[hash_alg]
         except FileNotFoundError:
@@ -188,7 +199,7 @@ class EFIBSAEvent(BaseEvent):
         return self._hash_pecoff(hash_alg)
 
 
-def logEventFactory(binary_reader, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa):
+def LogEventFactory(binary_reader, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa) -> BaseEvent | None:
     pcr_idx = binary_reader.read_u32()
     type = TpmEventType(binary_reader.read_u32())
 
