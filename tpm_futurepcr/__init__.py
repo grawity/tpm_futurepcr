@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
-from .device_path import device_path_to_unix_path
+from .LogEvent import EFIBSAEvent
 from .event_log import enum_log_entries
 from .pcr_bank import PcrBank, read_current_pcrs
 from .systemd_boot import loader_encode_pcr8, loader_decode_pcr8, loader_get_next_cmdline
 from .tpm_constants import TpmEventType, TpmAlgorithm
 import tpm_futurepcr.logging as logging
-from .util import hash_pecoff, to_hex, hash_bytes
+from .util import to_hex, hash_bytes
 
 logger = logging.getLogger('tpm_futurepcr')
 
@@ -15,7 +15,6 @@ logger = logging.getLogger('tpm_futurepcr')
 def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, substitute_bsa_unix_path: dict | None, allow_unexpected_bsa: bool):
     this_pcrs = PcrBank(hash_alg.name.lower())
     next_pcrs = PcrBank(hash_alg.name.lower())
-    errors = False
     last_efi_binary = None
 
     required_pcrs = set(wanted_pcrs)
@@ -23,7 +22,7 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
         logger.verbose('Although not requested, PCR 4 is a dependency for PCR 12')
         required_pcrs.add(4)
 
-    for event in enum_log_entries(log_path):
+    for event in enum_log_entries(substitute_bsa_unix_path, allow_unexpected_bsa, log_path):
         idx = event.pcr_idx
         if idx not in required_pcrs:
             continue
@@ -39,42 +38,19 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
 
         try:
             this_extend_value = event.pcr_extend_values[hash_alg]
+            logger.verbose("this event extend value = %s", to_hex(this_extend_value))
         except KeyError:
             if _verbose_pcr:
                 logger.verbose("event does not update the specified PCR bank, skipping")
             continue
-        next_extend_value = this_extend_value
 
-        if event.type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
-            try:
-                unix_path = device_path_to_unix_path(event.data.device_path_vec)
-                if substitute_bsa_unix_path:
-                    unix_path = substitute_bsa_unix_path.get(unix_path, unix_path)
-            except Exception as e:
-                logger.error(e)
-                errors = True
-                unix_path = None
+        # get the next extended value from the event
+        next_extend_value = event.next_extend_value(this_extend_value, hash_alg)
+        logger.verbose("guessed extend value = %s", to_hex(next_extend_value))
 
-            if unix_path:
-                try:
-                    next_extend_value = hash_pecoff(unix_path, hash_alg)
-                except FileNotFoundError:
-                    logger.info("File %s could not be opened. Continuing with the log-provided extend value", unix_path)
-                last_efi_binary = unix_path
-                if _verbose_pcr:
-                    logger.verbose("-- extending with coff hash --")
-                    logger.verbose("file path = %s", unix_path)
-                    logger.verbose("file hash = %s", to_hex(next_extend_value))
-                    logger.verbose("this event extend value = %s", to_hex(this_extend_value))
-                    logger.verbose("guessed extend value = %s", to_hex(next_extend_value))
-            else:
-                # This might be a firmware item such as the boot menu.
-                if not allow_unexpected_bsa:
-                    logger.error("Unexpected boot events found. Binding to these PCR values "
-                                 "is not advised, as it might be difficult to reproduce this state "
-                                 "later. Exiting.")
-                    exit(1)
-                logger.warning("couldn't map EfiBootServicesApplication event to a Linux path")
+        if isinstance(event, EFIBSAEvent):
+            last_efi_binary = event.unix_path
+            logger.verbose("extending with coff hash %s from path %s", to_hex(next_extend_value), event.unix_path)
 
         # Handle systemd EFI stub "kernel command line" measurements (found in
         # PCR 8 up to systemd v250, but PCR 12 afterwards).
@@ -108,7 +84,7 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
             logger.verbose("--> after this event, PCR %d contains value %s" % (idx, to_hex(this_pcrs[idx])))
             logger.verbose("--> after reboot, PCR %d will contain value %s" % (idx, to_hex(next_pcrs[idx])))
 
-    return this_pcrs, next_pcrs, errors
+    return this_pcrs, next_pcrs
 
 
 def compare_pcrs(hash_alg: str, this_pcrs: PcrBank, next_pcrs: PcrBank, wanted_pcrs: list[int]) -> bool:

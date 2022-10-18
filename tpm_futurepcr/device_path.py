@@ -1,9 +1,7 @@
 # https://github.com/tianocore/edk2/blob/master/MdePkg/Include/Protocol/DevicePath.h
-from pathlib import Path
 
 from .binary_reader import BinaryReader
 from .tpm_constants import *
-from .util import find_mountpoint_by_partuuid
 
 class Parseable():
     @classmethod
@@ -67,19 +65,3 @@ class DevicePath(list, Parseable):
 def parse_efi_device_path(buf):
     buf = BinaryReader(buf)
     return DevicePath.parse(buf)
-
-
-def device_path_to_unix_path(path_vec) -> Path | None:
-    dir_path = None
-    unix_path = None
-    for pp in path_vec:
-        if pp.type == DevicePathType.MediaDevice:
-            if pp.subtype == MediaDevicePathSubtype.HardDrive:
-                dir_path = find_mountpoint_by_partuuid(pp.part_uuid)
-                if not dir_path:
-                    raise Exception("could not find mountpoint for partuuid %r" % pp.part_uuid)
-            if pp.subtype == MediaDevicePathSubtype.FilePath:
-                unix_path = dir_path / Path(pp.file_path)
-        if pp.type == DevicePathType.End:
-            break
-    return unix_path
