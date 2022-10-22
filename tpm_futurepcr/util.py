@@ -44,12 +44,6 @@ def guid_to_UUID(buf):
     return uuid.UUID(bytes=buf)
 
 
-def hash_bytes(buf, alg="sha1"):
-    h = hashlib.new(alg)
-    h.update(buf)
-    return h.digest()
-
-
 def hash_file(path, alg="sha1"):
     h = hashlib.new(alg)
     with open(path, "rb") as fh:
