@@ -59,13 +59,12 @@ class BaseEvent(ABC):
                 self.pcr_extend_values[alg_id] = binary_reader.read(tcg_hdr["digest_sizes_dict"][alg_id])
         self._read_data(binary_reader)
 
-    @abstractmethod
     def _read_data(self, binary_reader: BinaryReader):
-        pass
+        event_size = binary_reader.read_u32()
+        self.data = binary_reader.read(event_size)
 
-    @abstractmethod
     def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
-        pass
+        return self.pcr_extend_values[hash_alg]
 
     def show(self):
         logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
@@ -79,13 +78,6 @@ class GenericEvent(BaseEvent):
     def __post_init__(self, binary_reader: BinaryReader, tpm_version: int, tcg_hdr: dict | None):
         super().__post_init__(binary_reader, tpm_version, tcg_hdr)
 
-    def _read_data(self, binary_reader: BinaryReader):
-        event_size = binary_reader.read_u32()
-        self.data = binary_reader.read(event_size)
-
-    def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
-        return self.pcr_extend_values[hash_alg]
-
 
 @dataclass
 class NoActionEvent(BaseEvent):
@@ -93,25 +85,11 @@ class NoActionEvent(BaseEvent):
     def __post_init__(self, binary_reader: BinaryReader, tpm_version: int, tcg_hdr: dict | None):
         super().__post_init__(binary_reader, tpm_version, tcg_hdr)
 
-    def _read_data(self, binary_reader: BinaryReader):
-        event_size = binary_reader.read_u32()
-        self.data = binary_reader.read(event_size)
-
-    def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
-        return self.pcr_extend_values[hash_alg]
-
 
 @dataclass
 class EFIVarEvent(BaseEvent):
     def __post_init__(self, binary_reader: BinaryReader, tpm_version: int, tcg_hdr: dict | None):
         super().__post_init__(binary_reader, tpm_version, tcg_hdr)
-
-    def _read_data(self, binary_reader: BinaryReader):
-        event_size = binary_reader.read_u32()
-        self.data = binary_reader.read(event_size)
-
-    def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
-        return self.pcr_extend_values[hash_alg]
 
     @staticmethod
     def _parse_efi_variable_event(data):
@@ -236,10 +214,6 @@ class IPLEvent(BaseEvent):
     def __post_init__(self, binary_reader: BinaryReader, tpm_version: int, tcg_hdr: dict | None):
         super().__post_init__(binary_reader, tpm_version, tcg_hdr)
 
-    def _read_data(self, binary_reader: BinaryReader):
-        event_size = binary_reader.read_u32()
-        self.data = binary_reader.read(event_size)
-
     def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
         try:
             cmdline = loader_get_next_cmdline(self.last_efi_binary)
@@ -267,15 +241,15 @@ class IPLEvent(BaseEvent):
 
 def LogEventFactory(binary_reader, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa) -> BaseEvent:
     pcr_idx = binary_reader.read_u32()
-    type = TpmEventType(binary_reader.read_u32())
+    _type = TpmEventType(binary_reader.read_u32())
 
-    if type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
-        return EFIBSAEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type, substitute_bsa_unix_path, allow_unexpected_bsa)
-    elif type in [TpmEventType.EFI_VARIABLE_AUTHORITY, TpmEventType.EFI_VARIABLE_BOOT, TpmEventType.EFI_VARIABLE_DRIVER_CONFIG]:
-        return EFIVarEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
-    elif type == TpmEventType.IPL:
-        return IPLEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
-    elif type == TpmEventType.NO_ACTION:
-        return NoActionEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
+    if _type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
+        return EFIBSAEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type, substitute_bsa_unix_path, allow_unexpected_bsa)
+    elif _type in [TpmEventType.EFI_VARIABLE_AUTHORITY, TpmEventType.EFI_VARIABLE_BOOT, TpmEventType.EFI_VARIABLE_DRIVER_CONFIG]:
+        return EFIVarEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type)
+    elif _type == TpmEventType.IPL:
+        return IPLEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type)
+    elif _type == TpmEventType.NO_ACTION:
+        return NoActionEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type)
     else:
-        return GenericEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
+        return GenericEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type)
