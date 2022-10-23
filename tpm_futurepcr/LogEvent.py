@@ -26,6 +26,7 @@ logger = logging.getLogger('log_event')
 class PCRBankNotUpdated(Exception):
     pass
 
+
 class EFIBSAEventException(Exception):
     pass
 
@@ -66,9 +67,10 @@ class BaseEvent(ABC):
     def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
         pass
 
-    @abstractmethod
     def show(self):
-        pass
+        logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
+        for i in hexdump(self.data, 64):
+            logger.debug(i)
 
 
 @dataclass
@@ -84,11 +86,6 @@ class GenericEvent(BaseEvent):
     def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
         return self.pcr_extend_values[hash_alg]
 
-    def show(self):
-        logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
-        for i in hexdump(self.data, 64):
-            logger.debug(i)
-
 
 @dataclass
 class NoActionEvent(BaseEvent):
@@ -102,11 +99,6 @@ class NoActionEvent(BaseEvent):
 
     def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
         return self.pcr_extend_values[hash_alg]
-
-    def show(self):
-        logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
-        for i in hexdump(self.data, 64):
-            logger.debug(i)
 
 
 @dataclass
@@ -272,24 +264,18 @@ class IPLEvent(BaseEvent):
         cmdline = loader_encode_pcr8(cmdline)
         return hashlib.new(hash_alg.name.lower(), cmdline).digest()
 
-    def show(self):
-        logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
-        for i in hexdump(self.data, 64):
-            logger.debug(i)
-
 
 def LogEventFactory(binary_reader, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa) -> BaseEvent:
     pcr_idx = binary_reader.read_u32()
     type = TpmEventType(binary_reader.read_u32())
 
-    match type:
-        case TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
-            return EFIBSAEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type, substitute_bsa_unix_path, allow_unexpected_bsa)
-        case TpmEventType.EFI_VARIABLE_AUTHORITY | TpmEventType.EFI_VARIABLE_BOOT | TpmEventType.EFI_VARIABLE_DRIVER_CONFIG:
-            return EFIVarEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
-        case TpmEventType.IPL:
-            return IPLEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
-        case TpmEventType.NO_ACTION:
-            return NoActionEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
-        case _:
-            return GenericEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
+    if type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
+        return EFIBSAEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type, substitute_bsa_unix_path, allow_unexpected_bsa)
+    elif type in [TpmEventType.EFI_VARIABLE_AUTHORITY, TpmEventType.EFI_VARIABLE_BOOT, TpmEventType.EFI_VARIABLE_DRIVER_CONFIG]:
+        return EFIVarEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
+    elif type == TpmEventType.IPL:
+        return IPLEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
+    elif type == TpmEventType.NO_ACTION:
+        return NoActionEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
+    else:
+        return GenericEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
