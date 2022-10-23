@@ -13,6 +13,7 @@ from .tpm_constants import TpmEventType, TpmAlgorithm, DevicePathType, MediaDevi
 from . import logging
 from .util import hexdump, guid_to_UUID, find_mountpoint_by_partuuid
 from .binary_reader import BinaryReader
+from .systemd_boot import loader_encode_pcr8, loader_decode_pcr8, loader_get_next_cmdline
 
 logger = logging.getLogger('log_event')
 
@@ -20,6 +21,14 @@ logger = logging.getLogger('log_event')
 # ~/src/linux/include/linux/tpm_eventlog.h
 # TPMv1: https://sources.debian.org/src/golang-github-coreos-go-tspi/0.1.1-2/tspi/tpm.go/?hl=44#L44
 # TPMv2: https://trustedcomputinggroup.org/wp-content/uploads/EFI-Protocol-Specification-rev13-160330final.pdf
+
+
+class PCRBankNotUpdated(Exception):
+    pass
+
+
+class EFIBSAEventException(Exception):
+    pass
 
 
 @dataclass
@@ -50,17 +59,17 @@ class BaseEvent(ABC):
                 self.pcr_extend_values[alg_id] = binary_reader.read(tcg_hdr["digest_sizes_dict"][alg_id])
         self._read_data(binary_reader)
 
-    @abstractmethod
     def _read_data(self, binary_reader: BinaryReader):
-        pass
+        event_size = binary_reader.read_u32()
+        self.data = binary_reader.read(event_size)
 
-    @abstractmethod
-    def next_extend_value(self, current_extend_value: bytes, hash_alg: str = "sha1") -> bytes:
-        pass
+    def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
+        return self.pcr_extend_values[hash_alg]
 
-    @abstractmethod
     def show(self):
-        pass
+        logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
+        for i in hexdump(self.data, 64):
+            logger.debug(i)
 
 
 @dataclass
@@ -69,12 +78,18 @@ class GenericEvent(BaseEvent):
     def __post_init__(self, binary_reader: BinaryReader, tpm_version: int, tcg_hdr: dict | None):
         super().__post_init__(binary_reader, tpm_version, tcg_hdr)
 
-    def _read_data(self, binary_reader: BinaryReader):
-        event_size = binary_reader.read_u32()
-        self.data = binary_reader.read(event_size)
 
-    def next_extend_value(self, current_extend_value: bytes, hash_alg: str = "sha1") -> bytes:
-        return current_extend_value
+@dataclass
+class NoActionEvent(BaseEvent):
+
+    def __post_init__(self, binary_reader: BinaryReader, tpm_version: int, tcg_hdr: dict | None):
+        super().__post_init__(binary_reader, tpm_version, tcg_hdr)
+
+
+@dataclass
+class EFIVarEvent(BaseEvent):
+    def __post_init__(self, binary_reader: BinaryReader, tpm_version: int, tcg_hdr: dict | None):
+        super().__post_init__(binary_reader, tpm_version, tcg_hdr)
 
     @staticmethod
     def _parse_efi_variable_event(data):
@@ -92,20 +107,14 @@ class GenericEvent(BaseEvent):
 
     def show(self):
         logger.verbose("\033[1mPCR %d -- Event <%s>\033[m", self.pcr_idx, self.type.name)
-        if self.type in {TpmEventType.EFI_VARIABLE_AUTHORITY,
-                            TpmEventType.EFI_VARIABLE_BOOT,
-                            TpmEventType.EFI_VARIABLE_DRIVER_CONFIG}:
-            if logger.level == logging.DEBUG:
-                for i in hexdump(self.data, 64):
-                    logger.debug(i)
-                ed = self._parse_efi_variable_event(self.data)
-                logger.debug(pformat(ed))
-            else:
-                ed = self._parse_efi_variable_event(self.data)
-                logger.verbose("Variable: %r {%s}", ed["unicode_name"], ed["variable_name_uuid"])
-        else:
+        if logger.level == logging.DEBUG:
             for i in hexdump(self.data, 64):
                 logger.debug(i)
+            ed = self._parse_efi_variable_event(self.data)
+            logger.debug(pformat(ed))
+        else:
+            ed = self._parse_efi_variable_event(self.data)
+            logger.verbose("Variable: %r {%s}", ed["unicode_name"], ed["variable_name_uuid"])
 
 
 @dataclass(frozen=True)
@@ -114,10 +123,6 @@ class _EFIBSAData:
     image_length: int
     image_lt_address: int
     device_path_vec: list[Any]
-
-
-class EFIBSAEventException(Exception):
-    pass
 
 
 @dataclass
@@ -185,25 +190,66 @@ class EFIBSAEvent(BaseEvent):
                 file_path = p.get("file_path", p["data"])
                 logger.verbose("  * %-20s %-20s %s", type_name, subtype_name, file_path)
 
-    def _hash_pecoff(self, hash_alg="sha1"):
+    def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
+        _hash_alg = hash_alg.name.lower()
         try:
             with open(self.unix_path, "rb") as fh:
                 fpr = AuthenticodeFingerprinter(fh)
-                fpr.add_authenticode_hashers(getattr(hashlib, hash_alg))
-                return fpr.hash()[hash_alg]
+                fpr.add_authenticode_hashers(getattr(hashlib, _hash_alg))
+                return fpr.hash()[_hash_alg]
         except FileNotFoundError:
-            logger.info("File %s could not be opened. Continuing with the log-provided extend value", self.unix_path)
-            raise ValueError
+            logger.info(
+                "File %s could not be opened. Continuing with the log-provided extend value",
+                self.unix_path)
+            return self.pcr_extend_values[hash_alg]
 
-    def next_extend_value(self, current_extend_value: bytes, hash_alg: str = "sha1") -> bytes:
-        return self._hash_pecoff(hash_alg)
+
+@dataclass
+class IPLEvent(BaseEvent):
+    # Handles systemd EFI stub "kernel command line" measurements (found in
+    # PCR 8 up to systemd v250, but PCR 12 afterwards).
+
+    last_efi_binary: Path = field(init=False)
+
+    def __post_init__(self, binary_reader: BinaryReader, tpm_version: int, tcg_hdr: dict | None):
+        super().__post_init__(binary_reader, tpm_version, tcg_hdr)
+
+    def next_extend_value(self, hash_alg: TpmAlgorithm = TpmAlgorithm.SHA1) -> bytes:
+        try:
+            cmdline = loader_get_next_cmdline(self.last_efi_binary)
+        except FileNotFoundError:
+            # Either EFI variables, the ESP, or the .conf, are missing.
+            # It's probably not a systemd-boot environment, so PCR[8] meaning is undefined.
+            logger.verbose("-- not touching non-systemd IPL event --")
+            return self.pcr_extend_values[hash_alg]
+
+        if logger.level <= logging.VERBOSE:
+            old_cmdline = self.data
+            # 2022-03-19 grawity: In the past, we had to strip away the last \0 byte for
+            # some reason (which I don't remember)... but apparently now we don't? Let's
+            # add a warning so that hopefully I remember why it was necessary.
+            if len(old_cmdline) % 2 != 0:
+                logger.warning("Expecting EV_IPL data to contain UTF-16, but length isn't a multiple of 2")
+                old_cmdline += b'\0'
+            old_cmdline = loader_decode_pcr8(old_cmdline)
+            logger.verbose("-- extending with systemd-boot cmdline --")
+            logger.verbose("this cmdline: %s", old_cmdline)
+            logger.verbose("next cmdline: %s", cmdline)
+        cmdline = loader_encode_pcr8(cmdline)
+        return hashlib.new(hash_alg.name.lower(), cmdline).digest()
 
 
-def LogEventFactory(binary_reader, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa) -> BaseEvent | None:
+def LogEventFactory(binary_reader, tpm_version, tcg_hdr, substitute_bsa_unix_path, allow_unexpected_bsa) -> BaseEvent:
     pcr_idx = binary_reader.read_u32()
-    type = TpmEventType(binary_reader.read_u32())
+    _type = TpmEventType(binary_reader.read_u32())
 
-    if type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
-        return EFIBSAEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type, substitute_bsa_unix_path, allow_unexpected_bsa)
+    if _type == TpmEventType.EFI_BOOT_SERVICES_APPLICATION:
+        return EFIBSAEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type, substitute_bsa_unix_path, allow_unexpected_bsa)
+    elif _type in [TpmEventType.EFI_VARIABLE_AUTHORITY, TpmEventType.EFI_VARIABLE_BOOT, TpmEventType.EFI_VARIABLE_DRIVER_CONFIG]:
+        return EFIVarEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type)
+    elif _type == TpmEventType.IPL:
+        return IPLEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type)
+    elif _type == TpmEventType.NO_ACTION:
+        return NoActionEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type)
     else:
-        return GenericEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, type)
+        return GenericEvent(binary_reader, tpm_version, tcg_hdr, pcr_idx, _type)

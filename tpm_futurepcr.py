@@ -8,10 +8,10 @@ from tpm_futurepcr import to_hex, process_log, compare_pcrs, possibly_unused_ban
 import tpm_futurepcr.logging as logging
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logger = logging.getLogger('tpm_futurepcr')
+logger = logging.getLogger("tpm_futurepcr")
 
 
-_HASH_ALG_CHOICES = ['sha1', 'sha256']
+_HASH_ALG_CHOICES = ["sha1", "sha256"]
 _PCRS_MAX_NUM = 24
 
 

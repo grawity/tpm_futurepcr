@@ -79,12 +79,11 @@ class TestTPM_FuturePCR(unittest.TestCase):
         file_mocks = []
         with open("tests/fixtures/ACTUAL_SYSTEMS/Dell_Optiplex_TPM2.0_UEFI_NonSB_Linux.log", "rb") as f:
             file_mocks.append(f.read())
-        file_mocks.append(FileNotFoundError)
+        file_mocks.extend([FileNotFoundError, FileNotFoundError])
 
         with patch("builtins.open", seq_mock_open(file_mocks)), \
              patch("os.path.exists", side_effect=[True]), \
              patch("tpm_futurepcr.LogEvent.find_mountpoint_by_partuuid", return_value='/'), \
-             patch("tpm_futurepcr.loader_get_next_cmdline", side_effect=[r'initrd=\intel-ucode.img initrd=\initramfs-linux.img rd.luks.name=0154ed05-bf69-4f1c-b74a-46f05048d78e=sys root=/dev/mapper/sys rw audit=0 i915.fastboot=1 net.ifnames=0']):
+             patch("tpm_futurepcr.LogEvent.loader_get_next_cmdline", side_effect=[r'initrd=\intel-ucode.img initrd=\initramfs-linux.img rd.luks.name=0154ed05-bf69-4f1c-b74a-46f05048d78e=sys root=/dev/mapper/sys rw audit=0 i915.fastboot=1 net.ifnames=0']):
             pcr_list = [12]
-            with self.assertRaises(ValueError):
-                process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), dict(), False)
+            process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), dict(), False)
