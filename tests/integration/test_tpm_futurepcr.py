@@ -6,7 +6,7 @@ from unittest.mock import patch
 import subprocess as sp
 
 from tests.utils import load_current_pcrs, seq_mock_open
-from tpm_futurepcr import process_log, compare_pcrs, logging
+from tpm_futurepcr import process_log, logging
 from tpm_futurepcr.tpm_constants import TpmAlgorithm
 
 
@@ -38,9 +38,7 @@ class TestTPM_FuturePCR(unittest.TestCase):
         for tst in subtests_succeed:
             with self.subTest("Test succeeds", tst=tst):
                 cmdline = f"python ./tpm_futurepcr.py {tst}".split()
-                with self.assertRaises(sp.CalledProcessError):
-                    t = sp.check_output(cmdline, encoding='utf-8')
-                    self.assertTrue(t[0].startswith("ERROR:tpm_futurepcr:Log contains no entries"))
+                t = sp.check_output(cmdline, encoding='utf-8')
 
     def test_replay_compare_eventlog_tpm2_BIOS_ROM_QEMU(self):
         file_mocks = []
@@ -56,7 +54,7 @@ class TestTPM_FuturePCR(unittest.TestCase):
              patch("os.path.exists", side_effect=[True]), \
              patch("tpm_futurepcr.LogEvent.find_mountpoint_by_partuuid", return_value='/'):
             this_pcrs, next_pcrs = process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), dict(), False)
-            self.assertFalse(compare_pcrs("sha256", this_pcrs, next_pcrs, pcr_list))
+            self.assertEqual(this_pcrs, next_pcrs)
 
     def test_replay_compare_eventlog_tpm2_BIOS_ROM_ACTUAL(self):
         tests = list(os.scandir("tests/fixtures/ACTUAL_SYSTEMS"))

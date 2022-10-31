@@ -3,7 +3,7 @@ from pathlib import Path
 
 from .LogEvent import EFIBSAEvent, IPLEvent, NoActionEvent
 from .event_log import enum_log_entries
-from .pcr_bank import PcrBank, read_current_pcrs
+from .PcrBank import PcrBank
 from .tpm_constants import TpmEventType, TpmAlgorithm
 import tpm_futurepcr.logging as logging
 from .util import to_hex
@@ -11,7 +11,7 @@ from .util import to_hex
 logger = logging.getLogger("tpm_futurepcr")
 
 
-def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, substitute_bsa_unix_path: dict | None, allow_unexpected_bsa: bool):
+def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, substitute_bsa_unix_path: dict | None, allow_unexpected_bsa: bool) -> tuple[PcrBank, PcrBank]:
     this_pcrs = PcrBank(hash_alg.name.lower())
     next_pcrs = PcrBank(hash_alg.name.lower())
     last_efi_binary = None
@@ -58,40 +58,11 @@ def process_log(wanted_pcrs: list[int], hash_alg: TpmAlgorithm, log_path: Path, 
         logger.verbose("guessed extend value = %s", to_hex(next_extend_value))
 
         if not isinstance(event, NoActionEvent):
-            this_pcrs.extend_with_hash(event.pcr_idx, this_extend_value)
-            next_pcrs.extend_with_hash(event.pcr_idx, next_extend_value)
+            this_pcrs.pcrs[event.pcr_idx].extend_with_hash(this_extend_value)
+            next_pcrs.pcrs[event.pcr_idx].extend_with_hash(next_extend_value)
 
         if verbose_pcr:
-            logger.verbose("--> after this event, PCR %d contains value %s" % (event.pcr_idx, to_hex(this_pcrs[event.pcr_idx])))
-            logger.verbose("--> after reboot, PCR %d will contain value %s" % (event.pcr_idx, to_hex(next_pcrs[event.pcr_idx])))
+            logger.verbose("--> after this event, PCR %d contains value %s", event.pcr_idx, this_pcrs.pcrs[event.pcr_idx])
+            logger.verbose("--> after reboot, PCR %d will contain value %s", event.pcr_idx, next_pcrs.pcrs[event.pcr_idx])
 
     return this_pcrs, next_pcrs
-
-
-def compare_pcrs(hash_alg: str, this_pcrs: PcrBank, next_pcrs: PcrBank, wanted_pcrs: list[int]) -> bool:
-    logger.info("== Real vs computed PCR values ==")
-    real_pcrs = read_current_pcrs(hash_alg)
-    errors = False
-
-    logger.info("       %-*s | %-*s", this_pcrs.pcr_size * 2, "REAL", next_pcrs.pcr_size * 2, "COMPUTED")
-    for idx in wanted_pcrs:
-        if real_pcrs[idx] == this_pcrs[idx]:
-            status = "+"
-        else:
-            errors = True
-            status = "<BAD>"
-        logger.info("PCR %2d: %s | %s %s", idx, to_hex(real_pcrs[idx]), to_hex(this_pcrs[idx]), status)
-
-    return errors
-
-
-def possibly_unused_bank(hash_alg: str, wanted_pcrs: list[int], this_pcrs: list[int]) -> bool:
-    for idx in wanted_pcrs:
-        if idx <= 7 and this_pcrs.count[idx] == 0:
-            # The first 8 PCRs always have an EV_SEPARATOR logged to them at the very least,
-            # and the first 3 or so will almost always have other boot events. If we never saw
-            # anything then the whole bank might be unused (and an all-zeros PCR value is
-            # obviously unsafe to bind against).
-            logger.error("Log contains no entries for PCR %d in the %r bank.", idx, hash_alg)
-            return True
-    return False
