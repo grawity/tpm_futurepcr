@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Iterator
 
 from .tpm_constants import TpmEventType, TpmAlgorithm
-from .LogEvent import LogEventFactory, BaseEvent, EFIBSAEventException
+from .log_event import LogEventFactory, BaseEvent, EFIBSAEventException
 from .binary_reader import BinaryReader
 import tpm_futurepcr.logging as logging
 

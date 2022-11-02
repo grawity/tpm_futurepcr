@@ -1,5 +1,5 @@
 import hashlib
-from abc import abstractmethod, ABC
+from abc import ABC
 from dataclasses import dataclass, InitVar, field
 import dataclasses
 from pathlib import Path
