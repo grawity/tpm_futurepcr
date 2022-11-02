@@ -5,7 +5,7 @@ from typing import Optional
 import re
 import logging
 
-from .PcrRegister import PcrRegister
+from .pcr_register import PcrRegister
 from .util import is_tpm2, in_path
 
 logger = logging.getLogger('PcrBank')
@@ -60,25 +60,18 @@ class PcrBank:
         return all(x.count != 0 for x in self.pcrs[:8])
 
     def __eq__(self, other):
-        differences = False
-        if self.num_pcrs != other.num_pcrs:
-            logger.info('The number of pcrs differs (%d != %d)', self.num_pcrs, other.num_pcrs)
-            differences = True
+        if self.num_pcrs != other.num_pcrs or self.hash_alg != other.hash_alg:
+            return False
 
-        if self.hash_alg != other.hash_alg:
-            logger.info('The hash differs (%s != %s)', self.hash_alg, other.hash_alg)
-            differences = True
+        return all(pcr1 == pcr2 for pcr1, pcr2 in zip(self.pcrs, other.pcrs))
 
-        logger.info("           %-*s | %-*s", self.pcr_size * 2, "REAL", other.pcr_size * 2, "COMPUTED")
+    def show_compare(self, other: 'PcrBank'):
+        logger.info("Number of PCRs: %d / %d", self.num_pcrs, other.num_pcrs)
 
+        logger.info("Hash algorithms: %s / %s", self.hash_alg, other.hash_alg)
+
+        logger.info("PCR values:")
+        logger.info("           %-*s | %-*s", self.pcr_size * 2, "REAL", other.pcr_size * 2,  "COMPUTED")
         for idx, pcr in enumerate(self.pcrs):
-            if pcr == other.pcrs[idx]:
-                if pcr.count:
-                    logger.info("   PCR %2d: %-*s | %-*s +", idx, self.pcr_size * 2, pcr, other.pcr_size * 2, other.pcrs[idx])
-                else:
-                    logger.verbose("PCR %2d: %-*s | %-*s +", idx, self.pcr_size * 2, pcr, other.pcr_size * 2, other.pcrs[idx])
-            else:
-                differences = True
-                logger.warning("PCR %2d: %-*s | %-*s <BAD>", idx, self.pcr_size * 2, pcr, other.pcr_size * 2, other.pcrs[idx])
-
-        return not differences
+            status = "+" if pcr == other.pcrs[idx] else "<BAD>"
+            logger.info("   PCR %2d: %-*s | %-*s %s", idx, self.pcr_size * 2, pcr, other.pcr_size * 2, other.pcrs[idx], status)

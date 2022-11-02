@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
-from .LogEvent import EFIBSAEvent, IPLEvent, NoActionEvent
+from .log_event import EFIBSAEvent, IPLEvent, NoActionEvent
 from .event_log import enum_log_entries
-from .PcrBank import PcrBank
+from .pcr_bank import PcrBank
 from .tpm_constants import TpmEventType, TpmAlgorithm
 import tpm_futurepcr.logging as logging
 from .util import to_hex

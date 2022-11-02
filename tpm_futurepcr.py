@@ -105,7 +105,9 @@ if __name__ == "__main__":
     # if requested, compare the pcr values to the actual ones and exit if different
     if args.compare:
         logger.info("== Real vs computed PCR values ==")
-        if this_pcrs != PcrBank.from_current_pcrs(args.hash_alg):
+        current = PcrBank.from_current_pcrs(args.hash_alg)
+        if this_pcrs != current:
+            this_pcrs.show_compare(current)
             exit(1)
 
     # if requested, write the output file with the calculated values

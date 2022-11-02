@@ -52,7 +52,7 @@ class TestTPM_FuturePCR(unittest.TestCase):
         pcr_list = [0, 1, 2, 3]
         with patch("builtins.open", seq_mock_open(file_mocks)), \
              patch("os.path.exists", side_effect=[True]), \
-             patch("tpm_futurepcr.LogEvent.find_mountpoint_by_partuuid", return_value='/'):
+             patch("tpm_futurepcr.log_event.find_mountpoint_by_partuuid", return_value='/'):
             this_pcrs, next_pcrs = process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), dict(), False)
             self.assertEqual(this_pcrs, next_pcrs)
 
@@ -66,7 +66,7 @@ class TestTPM_FuturePCR(unittest.TestCase):
 
         with patch("builtins.open", seq_mock_open(file_mocks)), \
              patch("os.path.exists", side_effect=[True]), \
-             patch("tpm_futurepcr.LogEvent.find_mountpoint_by_partuuid", return_value='/'):
+             patch("tpm_futurepcr.log_event.find_mountpoint_by_partuuid", return_value='/'):
             pcr_list = [0, 1, 2, 3]
             for tst in tests:
                 with self.subTest("Test actual log", tst=basename(tst.name)):
@@ -81,7 +81,7 @@ class TestTPM_FuturePCR(unittest.TestCase):
 
         with patch("builtins.open", seq_mock_open(file_mocks)), \
              patch("os.path.exists", side_effect=[True]), \
-             patch("tpm_futurepcr.LogEvent.find_mountpoint_by_partuuid", return_value='/'), \
-             patch("tpm_futurepcr.LogEvent.loader_get_next_cmdline", side_effect=[r'initrd=\intel-ucode.img initrd=\initramfs-linux.img rd.luks.name=0154ed05-bf69-4f1c-b74a-46f05048d78e=sys root=/dev/mapper/sys rw audit=0 i915.fastboot=1 net.ifnames=0']):
+             patch("tpm_futurepcr.log_event.find_mountpoint_by_partuuid", return_value='/'), \
+             patch("tpm_futurepcr.log_event.loader_get_next_cmdline", side_effect=[r'initrd=\intel-ucode.img initrd=\initramfs-linux.img rd.luks.name=0154ed05-bf69-4f1c-b74a-46f05048d78e=sys root=/dev/mapper/sys rw audit=0 i915.fastboot=1 net.ifnames=0']):
             pcr_list = [12]
             process_log(pcr_list, TpmAlgorithm.SHA256, Path("/unused"), dict(), False)
