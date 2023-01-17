@@ -12,6 +12,11 @@ from .systemd_boot import (
 from .tpm_constants import TpmEventType
 from .util import *
 
+hash_algs_to_tpm = {
+    "sha1":     TpmAlgorithm.SHA1,
+    "sha256":   TpmAlgorithm.SHA256,
+}
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-L", "--pcr-list",
@@ -42,8 +47,6 @@ def main():
             bank_spec = pcr_list.split(":")
             hash_alg = bank_spec[0]
             pcr_list = bank_spec[1]
-        elif not args.hash_alg:
-            exit("error: PCR hash algorithm must be explicitly specified and no longer defaults to 'sha1'.")
         wanted_pcrs = [int(idx) for idx in pcr_list.split(",")]
     else:
         verbose_all_pcrs = True
@@ -57,12 +60,11 @@ def main():
 
     if not hash_alg:
         exit("error: PCR hash algorithm must be explicitly specified and no longer defaults to 'sha1'.")
-    elif hash_alg == "sha1":
-        tpm_hash_alg = TpmAlgorithm.SHA1
-    elif hash_alg == "sha256":
-        tpm_hash_alg = TpmAlgorithm.SHA256
-    else:
-        exit("error: Only 'sha1' and 'sha256' algorithms are supported.")
+
+    try:
+        tpm_hash_alg = hash_algs_to_tpm[hash_alg]
+    except KeyError:
+        exit("error: Unsupported hash algorithm %r" % hash_alg)
 
     this_pcrs = PcrBank(hash_alg)
     next_pcrs = PcrBank(hash_alg)
