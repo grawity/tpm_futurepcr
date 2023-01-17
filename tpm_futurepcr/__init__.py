@@ -17,26 +17,7 @@ hash_algs_to_tpm = {
     "sha256":   TpmAlgorithm.SHA256,
 }
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-L", "--pcr-list",
-                        help="limit output to specified PCR indexes")
-    parser.add_argument("-H", "--hash-alg",
-                        help="specify the hash algorithm (sha1 or sha256)")
-    parser.add_argument("-o", "--output",
-                        help="write binary PCR values to specified file")
-    parser.add_argument("--allow-unexpected-bsa", action="store_true",
-                        help="accept BOOT_SERVICES_APPLICATION events with weird paths")
-    parser.add_argument("--substitute-bsa-unix-path", action=KeyValueAction,
-                        help="substitute BOOT_SERVICES_APPLICATION path (syntax: <computed unix path>=<new unix path>)")
-    parser.add_argument("--compare", action="store_true",
-                        help="compare computed PCRs against live values")
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="show verbose information about log parsing")
-    parser.add_argument("--log-path",
-                        help="read binary log from an alternative path")
-    args = parser.parse_args()
-
+def parse_pcr_list(args):
     hash_alg = None
     if args.pcr_list:
         verbose_all_pcrs = False
@@ -62,6 +43,30 @@ def main():
         print("warning: PCR hash algorithm now defaults to sha256, not sha1",
               file=sys.stderr)
         hash_alg = "sha256"
+
+    return hash_alg, wanted_pcrs, verbose_all_pcrs
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-L", "--pcr-list",
+                        help="limit output to specified PCR indexes")
+    parser.add_argument("-H", "--hash-alg",
+                        help="specify the hash algorithm (sha1 or sha256)")
+    parser.add_argument("-o", "--output",
+                        help="write binary PCR values to specified file")
+    parser.add_argument("--allow-unexpected-bsa", action="store_true",
+                        help="accept BOOT_SERVICES_APPLICATION events with weird paths")
+    parser.add_argument("--substitute-bsa-unix-path", action=KeyValueAction,
+                        help="substitute BOOT_SERVICES_APPLICATION path (syntax: <computed unix path>=<new unix path>)")
+    parser.add_argument("--compare", action="store_true",
+                        help="compare computed PCRs against live values")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="show verbose information about log parsing")
+    parser.add_argument("--log-path",
+                        help="read binary log from an alternative path")
+    args = parser.parse_args()
+
+    hash_alg, wanted_pcrs, verbose_all_pcrs = parse_pcr_list(args)
 
     try:
         tpm_hash_alg = hash_algs_to_tpm[hash_alg]
