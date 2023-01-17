@@ -59,7 +59,9 @@ def main():
             exit("error: Conflicting PCR hash algorithm specifications given.")
 
     if not hash_alg:
-        exit("error: PCR hash algorithm must be explicitly specified and no longer defaults to 'sha1'.")
+        print("warning: PCR hash algorithm now defaults to sha256, not sha1",
+              file=sys.stderr)
+        hash_alg = "sha256"
 
     try:
         tpm_hash_alg = hash_algs_to_tpm[hash_alg]
