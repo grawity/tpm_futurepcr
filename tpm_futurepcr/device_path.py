@@ -76,7 +76,7 @@ def device_path_to_unix_path(path_vec):
                 dir_path = find_mountpoint_by_partuuid(pp.part_uuid)
                 if not dir_path:
                     raise Exception("could not find mountpoint for partuuid %r" % pp.part_uuid)
-            if pp.subtype == MediaDevicePathSubtype.FilePath:
+            if pp.subtype == MediaDevicePathSubtype.FilePath and dir_path is not None:
                 file_path = pp.file_path
                 unix_path = dir_path + file_path.replace("\\", "/").rstrip("\0")
         if pp.type == DevicePathType.End:
