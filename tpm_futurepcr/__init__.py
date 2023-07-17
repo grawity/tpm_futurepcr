@@ -104,7 +104,7 @@ def main():
                 errors = 1
                 unix_path = None
 
-            if unix_path:
+            if unix_path and os.path.exists(unix_path):
                 file_hash = hash_pecoff(unix_path, hash_alg)
                 next_extend_value = file_hash
                 last_efi_binary = unix_path
