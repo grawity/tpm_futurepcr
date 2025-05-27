@@ -6,6 +6,10 @@ As an additional hack, this script also recognizes systemd-boot and updates its 
 
 This script will understand the event log in both SHA1-only (TPM 1.2) and Crypto-Agile (TPM 2.0, Linux kernel 5.3+) formats.
 
+### Other similar projects
+
+  - <https://github.com/okirch/pcr-oracle>
+
 ### Warning
 
 Until Linux 5.17, neither systemd-boot nor EFISTUB measure the loaded initrd images, making it unsafe to rely on PCR4 alone. (Starting with Linux 5.17, the initrd measurements are now stored in PCR9; this script does not yet support pre-calculating it.) Additionally, only systemd-boot measures the _command line_ into PCR8; EFISTUB on its own does not.
@@ -16,8 +20,8 @@ It is recommended to use PCR-based sealing (whether it is PCR4 with tpm\_futurep
 
 ### Dependencies
 
- * python-signify (for calculating Authenticode digests)
- * tpm2-tools (for reading current PCR values in kernels older than v5.12)
+  - python-signify (for calculating Authenticode digests)
+  - tpm2-tools (for reading current PCR values in kernels older than v5.12)
 
 ### Installation
   
